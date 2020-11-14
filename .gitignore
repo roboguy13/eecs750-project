@@ -1,0 +1,11 @@
+.*.swp
+*.aux
+*.bbl
+*.bcf
+*.blg
+*.log
+*.out
+*.pdf
+*.xml
+*.tex
+*.pf
