@@ -1,79 +1,83 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE RebindableSyntax #-}
+-- {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Security.Types
   where
 
-import           Prelude hiding ((>>), (>>=), return)
 import           GHC.Types (Type)
+import           Control.Monad.Operational
+import           Security.Repr
+import           Security.Sensitivity
+import           Security.CodeGen.Types
 
-data Sensitivity = Public | Secret
-
-type family Max sA sB where
-  Max Public Public = Public
-  Max sA     sB     = Secret
-
-type family Min sA sB where
-  Min Secret Secret = Secret
-  Min sA     sB     = Public
-
-type family (:<=) sA sB :: Bool where
-  (:<=) Public sB     = 'True
-  (:<=) Secret Secret = 'True
-  (:<=) Secret Public = 'False
-
-newtype Name (s :: Sensitivity) (a :: Type) = Name String
-
-data Ptr a
-data Array a
 
 -- TODO: Add a mechanism for "Secret" lambdas?
-data Cmd (s :: Sensitivity) a where
-  Nop :: forall s. Cmd s ()
+data CmdF a where
+  AllocSecret :: forall a. Int -> CmdF (Expr Secret (Array a))
+  AllocPublic :: forall a. Int -> CmdF (Expr Public (Array a))
 
-  Seq :: forall sA sB a b. Cmd sA a -> Cmd sB b -> Cmd (Max sA sB) b
+  Decl :: forall s a. Repr a => a -> CmdF (Name s a)
+  Assign :: forall s a. Expr s a -> Expr s a -> CmdF ()  -- | memcpy's arrays
+  -- Memcpy :: forall s a. Expr s (Array a) -> Expr s (Array a) ->
 
-  Bind :: forall sA sB a b. (sA :<= sB) ~ True => Cmd sA a -> (a -> Cmd sB b) -> Cmd (Max sA sB) b
+  NameFFI :: forall a. String -> CmdF a
 
-  AllocSecret :: forall a. Int -> Cmd Secret (Array a)
-  AllocPublic :: forall a. Int -> Cmd Public (Array a)
+  IfThenElse :: forall s a. Expr s Bool -> Cmd a -> Cmd a -> CmdF a
+  While :: forall s a. Expr s Bool -> Cmd a -> CmdF ()
+  For :: forall s a. a -> (Name s a -> Expr s Bool) -> (Name s a -> Cmd ()) -> (Name s a -> Cmd ()) -> CmdF ()
 
-  Decl :: forall s a. a -> Cmd s (Name s a)
-  Assign :: forall s a. Expr s a -> Expr s a -> Cmd s ()  -- | memcpy's arrays
+type Cmd = Program CmdF
 
-  NameFFI :: forall a. String -> Cmd Public a
+allocSecret :: forall a. Int -> Cmd (Expr Secret (Array a))
+allocSecret = singleton . AllocSecret @a
 
-  IfThenElse :: forall s a. Expr s Bool -> Cmd s a -> Cmd s a -> Cmd s a
-  While :: forall s a. Expr s Bool -> Cmd s a -> Cmd s ()
-  -- For :: forall s a. String -> 
+allocPublic :: forall a. Int -> Cmd (Expr Public (Array a))
+allocPublic = singleton . AllocPublic @a
 
+decl :: forall s a. Repr a => a -> Cmd (Name s a)
+decl = singleton . Decl @s @a
 
-pattern x := y = Assign x y
+infixr 0 .=
+(.=) :: forall s a. Expr s a -> Expr s a -> Cmd ()
+x .= y = singleton (Assign x y)
 
+nameFFI :: forall a. String -> Cmd a
+nameFFI = singleton . NameFFI @a
 
-(>>=) :: forall sA sB a b. (sA :<= sB) ~ True => Cmd sA a -> (a -> Cmd sB b) -> Cmd (Max sA sB) b
-(>>=) = Bind
+ifThenElse :: forall s a. Expr s Bool -> Cmd a -> Cmd a -> Cmd a
+ifThenElse c t f = singleton (IfThenElse c t f)
 
-(>>) = Seq
+while :: forall s a. Expr s Bool -> Cmd a -> Cmd ()
+while c b = singleton (While c b)
+
+for :: forall s a. a -> (Name s a -> Expr s Bool) -> (Name s a -> Cmd ()) -> (Name s a -> Cmd ()) -> Cmd ()
+for initial conditional update body = singleton (For initial conditional update body)
+
 
 -- type LVal s a = forall side. Expr side s a
 
+(+=) :: forall s a. Num a => Expr s a -> Expr s a -> Cmd ()
+x += y = x .= x + y
 
-test :: Cmd Public ()
+(-=) :: forall s a. Num a => Expr s a -> Expr s a -> Cmd ()
+x -= y = x .= x - y
+
+test :: Cmd ()
 test = do
-  x <- Decl @Public (1 :: Int)
-  let xVar = Var x
+  x <- decl @Public (1 :: Int)
+  let xVar = var x
       y = xVar + xVar
 
-  xVar := y
+  xVar .= y
 
-  Nop @Public
+  return ()
 
 
 data Expr  (s :: Sensitivity) a where
@@ -94,10 +98,12 @@ data Expr  (s :: Sensitivity) a where
 
   Call :: forall s a b. Name s (a -> b) -> Expr s a -> Expr s b
 
-  Var :: forall s a. Name s a -> Expr s a -- Do not export this constructor
+  Var :: forall s a. Name s a -> Expr s a
   Deref :: forall s a. Expr s (Ptr a) -> Expr s a
   Index :: forall sA sB a. (sB :<= sA) ~ True => Expr sA (Array a) -> Expr sB Int -> Expr sA a
 
+var :: forall s a. Name s a -> Expr s a
+var = Var
 
 (==?), (<?), (>?) :: forall s a. Ord a => Expr s a -> Expr s a -> Expr s Bool
 (==?) = Eql
@@ -108,11 +114,6 @@ data Expr  (s :: Sensitivity) a where
 (&&?) = And
 (||?) = Or
 
-(+=) :: forall s a. Num a => Expr s a -> Expr s a -> Cmd s ()
-x += y = x := (x + y)
-
-(-=) :: forall s a. Num a => Expr s a -> Expr s a -> Cmd s ()
-x -= y = x := (x - y)
 
 
 instance (Num a) => Num (Expr s a) where
