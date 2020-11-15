@@ -12,7 +12,7 @@ singleton x = Node x []
 
 addChild :: Eq a => a -> a -> Tree a -> Tree a
 addChild parent child orig@(Node n xs)
-  | n == parent = Node n (Node child []:xs)
+  | n == parent = Node n (Node child [] : xs)
   | otherwise   = orig
 
 forestAddChild :: Eq a => a -> a -> Forest a -> Forest a
