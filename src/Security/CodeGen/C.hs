@@ -32,9 +32,9 @@ genC c =
       name <- freshName @Public
       let d = genDecl ctype name
           vName = Var name
-      assignment <- genC (vName .= Literal x)
+      xCode <- genExprC (Literal x)
       r <- genC (k name)
-      return $ unlines [stmt [d], assignment, r]
+      return $ unlines [stmt [d, "=", xCode], r]
 
     Assign (Var n) e :>>= k -> do
       eCode <- genExprC e
@@ -47,9 +47,18 @@ genC c =
 
       return $ unlines
         ["if (" ++ condCode ++ ") {"
-        ,tCode
+        ,block tCode
         ,"} else {"
-        ,fCode
+        ,block fCode
+        ,"}"
+        ]
+
+    While cond body :>>= k -> do
+      condCode <- genExprC cond
+      bodyCode <- genC body
+      return $ unlines
+        ["while (" ++ condCode ++ ") {"
+        ,block bodyCode
         ,"}"
         ]
 
@@ -63,6 +72,7 @@ genExprC :: forall s a. Repr a => Expr s a -> CodeGen String
 genExprC (Literal x) = return $ lit x
 genExprC (Var n) = return $ emitName n
 genExprC (Add x y) = genBinOp x y "+"
+genExprC (Sub x y) = genBinOp x y "-"
 genExprC (Lt x y) = genBinOp x y "<"
 
 
@@ -88,4 +98,10 @@ example3 = do
   ifThenElse (Var x <? 3)
     (Var y .= 5)
     (Var y .= 7)
+
+example4 :: Cmd ()
+example4 = do
+  x <- decl (21 :: Int)
+  while (0 <? Var x)
+    (Var x -= 1)
 

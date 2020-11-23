@@ -4,12 +4,13 @@
 {-# LANGUAGE DataKinds #-}
 
 module Security.CodeGen.Types
-  (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, stmt)
+  (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, stmt, block)
   where
 
 import           GHC.Types (Type)
 import           Control.Monad.State
 import           Security.Sensitivity
+import           Data.List
 
 -- | Do not export the value contructor here:
 newtype Name (s :: Sensitivity) (a :: Type) = Name String
@@ -45,4 +46,7 @@ emitName (Name n) = n
 
 stmt :: [String] -> String
 stmt = (++";") . unwords
+
+block :: String -> String
+block = concatMap ("  "++) . intersperse "\n" . lines
 
