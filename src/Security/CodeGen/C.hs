@@ -12,6 +12,7 @@ import           Security.Sensitivity
 import           Security.CodeGen.Types
 
 import           Control.Monad.Operational
+import           Data.List
 
 genC :: forall a. Repr a => Cmd a -> CodeGen String
 genC c =
@@ -62,20 +63,44 @@ genC c =
         ,"}"
         ]
 
-genBinOp :: forall s a. Repr a => Expr s a -> Expr s a -> String -> CodeGen String
-genBinOp x y op = do
-  xCode <- genExprC x
-  yCode <- genExprC y
-  return $ unwords [xCode, op, yCode]
+data Parens = WithParens | NoParens
+
 
 genExprC :: forall s a. Repr a => Expr s a -> CodeGen String
-genExprC (Literal x) = return $ lit x
-genExprC (Var n) = return $ emitName n
-genExprC (Add x y) = genBinOp x y "+"
-genExprC (Sub x y) = genBinOp x y "-"
-genExprC (Lt x y) = genBinOp x y "<"
+genExprC = go NoParens
+  where
+    genBinOp :: forall s a. Repr a => Parens -> Expr s a -> Expr s a -> String -> CodeGen String
+    genBinOp parens x y op = do
+      xCode <- go WithParens x
+      yCode <- go WithParens y
+      return . withParens parens $ unwords [xCode, op, yCode]
 
+    go _      (Literal x) = return $ lit x
+    go parens (Var n)     = return $ emitName n
+    go parens (Add x y)   = genBinOp parens x y "+"
+    go parens (Sub x y)   = genBinOp parens x y "-"
+    go parens (Mul x y)   = genBinOp parens x y "*"
+    go parens (Eql x y)   = genBinOp parens x y "=="
+    go parens (Lt x y)    = genBinOp parens x y "<"
+    go parens (Gt x y)    = genBinOp parens x y ">"
 
+withParens :: Parens -> String -> String
+withParens WithParens s = '(' : s ++ ")"
+withParens NoParens   s = s
+
+-- parens :: String -> String
+-- parens = ('(':) . (++")")
+
+entryPoint :: CodeGen String -> CodeGen String
+entryPoint = fmap go
+  where
+    go code =
+      concat $
+      intersperse "\n"
+        ["int main() {"
+        ,block code
+        ,"}"
+        ]
 
 example1 :: Cmd ()
 example1 = do
@@ -102,6 +127,6 @@ example3 = do
 example4 :: Cmd ()
 example4 = do
   x <- decl (21 :: Int)
-  while (0 <? Var x)
+  while ((1 + 1) <? Var x)
     (Var x -= 1)
 
