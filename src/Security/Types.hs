@@ -20,58 +20,58 @@ import           Security.CodeGen.Types
 
 -- TODO: Add a mechanism for "Secret" lambdas?
 data CmdF a where
-  AllocSecret :: forall a. Int -> CmdF (Expr Secret (Array a))
-  AllocPublic :: forall a. Int -> CmdF (Expr Public (Array a))
+  AllocSecret :: forall a. Repr a => Int -> CmdF (Expr Secret (Ptr a))
+  AllocPublic :: forall a. Repr a => Int -> CmdF (Expr Public (Ptr a))
 
-  Decl :: forall s a. Repr a => a -> CmdF (Name s a)
-  Assign :: forall s a. Expr s a -> Expr s a -> CmdF ()  -- | memcpy's arrays
+  Decl :: forall a. Repr a => a -> CmdF (Name Public a)
+  Assign :: forall s a. Repr a => Expr s a -> Expr s a -> CmdF ()  -- | memcpy's arrays
   -- Memcpy :: forall s a. Expr s (Array a) -> Expr s (Array a) ->
 
   NameFFI :: forall a. String -> CmdF a
 
-  IfThenElse :: forall s a. Expr s Bool -> Cmd a -> Cmd a -> CmdF a
-  While :: forall s a. Expr s Bool -> Cmd a -> CmdF ()
-  For :: forall s a. a -> (Name s a -> Expr s Bool) -> (Name s a -> Cmd ()) -> (Name s a -> Cmd ()) -> CmdF ()
+  IfThenElse :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd a -> CmdF a
+  While :: forall s a. Repr a => Expr s Bool -> Cmd a -> CmdF ()
+  For :: forall s a. Repr a => a -> (Name s a -> Expr s Bool) -> (Name s a -> Cmd ()) -> (Name s a -> Cmd ()) -> CmdF ()
 
 type Cmd = Program CmdF
 
-allocSecret :: forall a. Int -> Cmd (Expr Secret (Array a))
+allocSecret :: forall a. Repr a => Int -> Cmd (Expr Secret (Ptr a))
 allocSecret = singleton . AllocSecret @a
 
-allocPublic :: forall a. Int -> Cmd (Expr Public (Array a))
+allocPublic :: forall a. Repr a => Int -> Cmd (Expr Public (Ptr a))
 allocPublic = singleton . AllocPublic @a
 
-decl :: forall s a. Repr a => a -> Cmd (Name s a)
-decl = singleton . Decl @s @a
+decl :: forall a. Repr a => a -> Cmd (Name Public a)
+decl = singleton . Decl @a
 
 infixr 0 .=
-(.=) :: forall s a. Expr s a -> Expr s a -> Cmd ()
+(.=) :: forall s a. Repr a => Expr s a -> Expr s a -> Cmd ()
 x .= y = singleton (Assign x y)
 
 nameFFI :: forall a. String -> Cmd a
 nameFFI = singleton . NameFFI @a
 
-ifThenElse :: forall s a. Expr s Bool -> Cmd a -> Cmd a -> Cmd a
+ifThenElse :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd a -> Cmd a
 ifThenElse c t f = singleton (IfThenElse c t f)
 
-while :: forall s a. Expr s Bool -> Cmd a -> Cmd ()
+while :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd ()
 while c b = singleton (While c b)
 
-for :: forall s a. a -> (Name s a -> Expr s Bool) -> (Name s a -> Cmd ()) -> (Name s a -> Cmd ()) -> Cmd ()
+for :: forall s a. Repr a => a -> (Name s a -> Expr s Bool) -> (Name s a -> Cmd ()) -> (Name s a -> Cmd ()) -> Cmd ()
 for initial conditional update body = singleton (For initial conditional update body)
 
 
 -- type LVal s a = forall side. Expr side s a
 
-(+=) :: forall s a. Num a => Expr s a -> Expr s a -> Cmd ()
+(+=) :: forall s a. (Repr a, Num a) => Expr s a -> Expr s a -> Cmd ()
 x += y = x .= x + y
 
-(-=) :: forall s a. Num a => Expr s a -> Expr s a -> Cmd ()
+(-=) :: forall s a. (Repr a, Num a) => Expr s a -> Expr s a -> Cmd ()
 x -= y = x .= x - y
 
 test :: Cmd ()
 test = do
-  x <- decl @Public (1 :: Int)
+  x <- decl (1 :: Int)
   let xVar = var x
       y = xVar + xVar
 
@@ -100,7 +100,7 @@ data Expr  (s :: Sensitivity) a where
 
   Var :: forall s a. Name s a -> Expr s a
   Deref :: forall s a. Expr s (Ptr a) -> Expr s a
-  Index :: forall sA sB a. (sB :<= sA) ~ True => Expr sA (Array a) -> Expr sB Int -> Expr sA a
+  Index :: forall sA sB a. (sB :<= sA) ~ True => Expr sA (Ptr a) -> Expr sB Int -> Expr sA a
 
 var :: forall s a. Name s a -> Expr s a
 var = Var
