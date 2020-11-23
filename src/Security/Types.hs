@@ -81,16 +81,16 @@ test = do
 
 
 data Expr  (s :: Sensitivity) a where
-  Literal :: forall s a. a -> Expr s a
+  Literal :: forall s a. Repr a => a -> Expr s a
   -- LValExpr :: forall s a. LVal s a -> Expr s a
 
-  Add :: forall s a. Num a => Expr s a -> Expr s a -> Expr s a
-  Sub :: forall s a. Num a => Expr s a -> Expr s a -> Expr s a
-  Mul :: forall s a. Num a => Expr s a -> Expr s a -> Expr s a
+  Add :: forall s a. (Repr a, Num a) => Expr s a -> Expr s a -> Expr s a
+  Sub :: forall s a. (Repr a, Num a) => Expr s a -> Expr s a -> Expr s a
+  Mul :: forall s a. (Repr a, Num a) => Expr s a -> Expr s a -> Expr s a
 
-  Eql :: forall s a. Eq a => Expr s a -> Expr s a -> Expr s Bool
-  Lt :: forall s a. Ord a => Expr s a -> Expr s a -> Expr s Bool
-  Gt :: forall s a. Ord a => Expr s a -> Expr s a -> Expr s Bool
+  Eql :: forall s a. (Repr a, Eq a) => Expr s a -> Expr s a -> Expr s Bool
+  Lt :: forall s a. (Repr a, Ord a) => Expr s a -> Expr s a -> Expr s Bool
+  Gt :: forall s a. (Repr a, Ord a) => Expr s a -> Expr s a -> Expr s Bool
 
   Not :: forall s. Expr s Bool -> Expr s Bool
   And :: forall s. Expr s Bool -> Expr s Bool -> Expr s Bool
@@ -98,14 +98,14 @@ data Expr  (s :: Sensitivity) a where
 
   Call :: forall s a b. Name s (a -> b) -> Expr s a -> Expr s b
 
-  Var :: forall s a. Name s a -> Expr s a
-  Deref :: forall s a. Expr s (Ptr a) -> Expr s a
-  Index :: forall sA sB a. (sB :<= sA) ~ True => Expr sA (Ptr a) -> Expr sB Int -> Expr sA a
+  Var :: forall s a. Repr a => Name s a -> Expr s a
+  Deref :: forall s a. Repr a => Expr s (Ptr a) -> Expr s a
+  Index :: forall sA sB a. (Repr a, (sB :<= sA) ~ True) => Expr sA (Ptr a) -> Expr sB Int -> Expr sA a
 
-var :: forall s a. Name s a -> Expr s a
+var :: forall s a. Repr a => Name s a -> Expr s a
 var = Var
 
-(==?), (<?), (>?) :: forall s a. Ord a => Expr s a -> Expr s a -> Expr s Bool
+(==?), (<?), (>?) :: forall s a. (Repr a, Ord a) => Expr s a -> Expr s a -> Expr s Bool
 (==?) = Eql
 (<?) = Lt
 (>?) = Gt
@@ -116,7 +116,7 @@ var = Var
 
 
 
-instance (Num a) => Num (Expr s a) where
+instance (Num a, Repr a) => Num (Expr s a) where
   (+) = Add
   (*) = Mul
   (-) = Sub

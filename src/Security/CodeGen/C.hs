@@ -51,13 +51,17 @@ genC c =
         ,"}"
         ]
 
+genBinOp :: forall s a. Repr a => Expr s a -> Expr s a -> String -> CodeGen String
+genBinOp x y op = do
+  xCode <- genExprC x
+  yCode <- genExprC y
+  return $ unwords [xCode, op, yCode]
+
 genExprC :: forall s a. Repr a => Expr s a -> CodeGen String
 genExprC (Literal x) = return $ lit x
 genExprC (Var n) = return $ emitName n
-genExprC (Add x y) = do
-  xCode <- genExprC x
-  yCode <- genExprC y
-  return $ unwords [xCode, "+", yCode]
+genExprC (Add x y) = genBinOp x y "+"
+genExprC (Lt x y) = genBinOp x y "<"
 
 
 
@@ -73,6 +77,13 @@ example1 = do
 -- example2 = do
 --   array1 <- allocSecret @Int 8
 --   array2 <- allocPublic @Int 8
-
 --   array2 .= array1
+
+example3 :: Cmd ()
+example3 = do
+  x <- decl (1 :: Int)
+  y <- decl (0 :: Int)
+  ifThenElse (Var x <? 3)
+    (Var y .= 5)
+    (Var y .= 7)
 
