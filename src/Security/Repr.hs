@@ -3,6 +3,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE DataKinds #-}
 
 module Security.Repr where
 

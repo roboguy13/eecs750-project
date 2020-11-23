@@ -1,4 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE DataKinds #-}
 
 module Security.CodeGen.Types
   (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, stmt)
