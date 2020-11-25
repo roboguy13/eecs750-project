@@ -63,18 +63,35 @@ genC c =
         ,"}"
         ]
 
+    For init loopTriple :>>= k -> do
+      loopVar <- freshName -- @Public
+
+      let (cond, update, body) = loopTriple loopVar
+
+      initCode <- genExprC init
+      condCode <- genExprC cond
+      updateCode <- genC update
+      bodyCode <- genC body
+
+      return $ unlines
+        ["for (" ++ genDecl ctype loopVar ++ " = " ++ initCode ++ "; " ++ condCode ++ "; " ++ updateCode ++ ") {"
+        ,bodyCode
+        ,"}"
+        ]
+
 data Parens = WithParens | NoParens
 
 
-genExprC :: forall s a. Repr a => Expr s a -> CodeGen String
+genExprC :: forall s a. GenDecl s => Expr s a -> CodeGen String
 genExprC = go NoParens
   where
-    genBinOp :: forall s a. Repr a => Parens -> Expr s a -> Expr s a -> String -> CodeGen String
+    genBinOp :: forall s a. GenDecl s => Parens -> Expr s a -> Expr s a -> String -> CodeGen String
     genBinOp parens x y op = do
       xCode <- go WithParens x
       yCode <- go WithParens y
-      return . withParens parens $ unwords [xCode, op, yCode]
+      return . parenthesize parens $ unwords [xCode, op, yCode]
 
+    go :: forall s a. GenDecl s => Parens -> Expr s a -> CodeGen String
     go _      (Literal x) = return $ lit x
     go parens (Var n)     = return $ emitName n
     go parens (Add x y)   = genBinOp parens x y "+"
@@ -83,10 +100,29 @@ genExprC = go NoParens
     go parens (Eql x y)   = genBinOp parens x y "=="
     go parens (Lt x y)    = genBinOp parens x y "<"
     go parens (Gt x y)    = genBinOp parens x y ">"
+    go parens (Not x)     = do
+      xCode <- go WithParens x
+      return $ parenthesize parens ('!' : xCode)
+    go parens (And x y)   = genBinOp parens x y "&&"
+    go parens (Or  x y)   = genBinOp parens x y "||"
 
-withParens :: Parens -> String -> String
-withParens WithParens s = '(' : s ++ ")"
-withParens NoParens   s = s
+    go parens (Call f x)  = do
+      fCode <- go WithParens f
+      xCode <- go NoParens x
+      return $ fCode ++ "(" ++ xCode ++ ")"
+
+    go parens (Deref x) = do
+      xCode <- go WithParens x
+      return $ parenthesize parens ('*' : xCode)
+
+    go parens (Index ptr ix) = do
+      ptrCode <- go WithParens ptr
+      ixCode <- go NoParens ix
+      return $ parenthesize parens (ptrCode ++ "[" ++ ixCode ++ "]")
+
+parenthesize :: Parens -> String -> String
+parenthesize WithParens s = '(' : s ++ ")"
+parenthesize NoParens   s = s
 
 -- parens :: String -> String
 -- parens = ('(':) . (++")")

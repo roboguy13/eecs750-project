@@ -43,6 +43,8 @@ instance Repr Bool where
 instance Repr () where
   typeRepr x = case x of {}
 
+instance Repr a => Repr (Name s a) where
+
 class GenDecl s where
   genDecl :: (Repr a) => CType a -> Name s a -> String
 
