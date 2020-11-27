@@ -24,7 +24,7 @@ data CmdF a where
   AllocSecret :: forall a. Repr a => Int -> CmdF (Expr Secret (Ptr a))
   AllocPublic :: forall a. Repr a => Int -> CmdF (Expr Public (Ptr a))
 
-  Decl :: forall a. Repr a => a -> CmdF (Name Public a)
+  Decl :: forall a. Repr a => a -> CmdF (Expr Public a)
   Assign :: forall s a. Repr a => Expr s a -> Expr s a -> CmdF ()  -- | memcpy's arrays
   -- Memcpy :: forall s a. Expr s (Array a) -> Expr s (Array a) ->
 
@@ -32,7 +32,7 @@ data CmdF a where
 
   IfThenElse :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd a -> CmdF a
   While :: forall s a. Repr a => Expr s Bool -> Cmd a -> CmdF ()
-  For :: forall s a. (Repr a) => Expr s a -> (Name s a -> (Expr s Bool, Cmd (), Cmd ())) -> CmdF ()
+  For :: forall s a. (Repr a) => Expr s a -> (Expr s a -> (Expr s Bool, Cmd (), Cmd ())) -> CmdF ()
 
 type Cmd = Program CmdF
 
@@ -42,7 +42,7 @@ allocSecret = singleton . AllocSecret @a
 allocPublic :: forall a. Repr a => Int -> Cmd (Expr Public (Ptr a))
 allocPublic = singleton . AllocPublic @a
 
-decl :: forall a. Repr a => a -> Cmd (Name Public a)
+decl :: forall a. Repr a => a -> Cmd (Expr Public a)
 decl = singleton . Decl @a
 
 infixr 0 .=
@@ -58,7 +58,7 @@ ifThenElse c t f = singleton (IfThenElse c t f)
 while :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd ()
 while c b = singleton (While c b)
 
-for :: forall s a. (Repr a) => Expr s a -> (Name s a -> (Expr s Bool, Cmd (), Cmd ())) -> Cmd ()
+for :: forall s a. (Repr a) => Expr s a -> (Expr s a -> (Expr s Bool, Cmd (), Cmd ())) -> Cmd ()
 for initial loopTriple = singleton (For initial loopTriple)
 
 
@@ -73,10 +73,9 @@ x -= y = x .= x - y
 test :: Cmd ()
 test = do
   x <- decl (1 :: Int)
-  let xVar = var x
-      y = xVar + xVar
+  let y = x + x
 
-  xVar .= y
+  x .= y
 
   return ()
 

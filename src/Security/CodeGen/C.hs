@@ -35,7 +35,7 @@ genC c =
       let d = genDecl ctype name
           vName = Var name
       xCode <- genExprC (Literal @Public x)
-      r <- genC (k name)
+      r <- genC (k vName)
       return $ unlines [stmt [d, "=", xCode], r]
 
     Assign (Var n) e :>>= k -> do
@@ -67,8 +67,9 @@ genC c =
     For (init :: Expr s c) loopTriple :>>= k -> do
       let sensSing = exprSens init
       loopVar <- withSing sensSing freshName
+      let loopExpr = withSing sensSing Var loopVar
 
-      let (cond, update, body) = loopTriple loopVar
+      let (cond, update, body) = loopTriple loopExpr
 
       initCode <- genExprC init
       condCode <- genExprC cond
@@ -158,20 +159,20 @@ example3 :: Cmd ()
 example3 = do
   x <- decl (1 :: Int)
   y <- decl (0 :: Int)
-  ifThenElse (Var x <? 3)
-    (Var y .= 5)
-    (Var y .= 7)
+  ifThenElse (x <? 3)
+    (y .= 5)
+    (y .= 7)
 
 example4 :: Cmd ()
 example4 = do
   x <- decl (21 :: Int)
-  while ((1 + 1) <? Var x)
-    (Var x -= 1)
+  while ((1 + 1) <? x)
+    (x -= 1)
 
 example5 :: Cmd ()
 example5 = do
   x <- decl (1 :: Int)
   for (0 :: Expr Public Int)
-    (\i -> ((Var i <? 10), (Var i += 1)
-           ,Var x += 1))
+    (\i -> ((i <? 10), (i += 1)
+           ,x += 1))
 
