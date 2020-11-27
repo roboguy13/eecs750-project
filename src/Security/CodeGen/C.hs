@@ -17,8 +17,15 @@ import           Security.Sing
 import           Control.Monad.Operational
 import           Data.List
 
+stmt' :: Bool -> [String] -> String
+stmt' False = unwords
+stmt' True  = stmt
+
 genC :: forall a. Repr a => Cmd a -> CodeGen String
-genC c =
+genC = genC0 True
+
+genC0 :: forall a. Repr a => Bool -> Cmd a -> CodeGen String
+genC0 withSemi c =
   case view c of
     Return x -> return "" -- Commands cannot have values in this subset of C
 
@@ -26,13 +33,13 @@ genC c =
       name <- freshName @Secret
       let d = genDecl ctype name
       r <- genC (k (Var name))
-      return $ unlines [stmt [d], r]
+      return $ unlines'With r [stmt' withSemi [d]]
 
     AllocPublic size :>>= k -> do
       name <- freshName @Public
       let d = genDecl ctype name
       r <- genC (k (Var name))
-      return $ unlines [stmt [d], r]
+      return $ unlines'With r [stmt' withSemi [d]]
 
     Decl x :>>= k -> do
       name <- freshName @Public
@@ -40,19 +47,19 @@ genC c =
           vName = Var name
       xCode <- genExprC (Literal @Public x)
       r <- genC (k vName)
-      return $ unlines [stmt [d, "=", xCode], r]
+      return $ unlines'With r [stmt' withSemi [d, "=", xCode]]
 
     Assign (Var n) e :>>= k -> do
       eCode <- genExprC e
       r <- genC (k ())
-      return $ unlines [stmt [emitName n, "=", eCode], r]
+      return $ unlines'With r [stmt' withSemi [emitName n, "=", eCode]]
 
     -- Assign x@(Index _ _) y :>>= k -> do
     Assign x y :>>= k -> do
       xCode <- genExprC x
       yCode <- genExprC y
       r <- genC (k ())
-      return $ unlines [stmt [xCode, "=", yCode], r]
+      return $ unlines'With r [stmt' withSemi [xCode, "=", yCode]]
 
     IfThenElse cond t f :>>= k -> do
       condCode <- genExprC cond
@@ -61,13 +68,12 @@ genC c =
 
       r <- genC (k ())
 
-      return $ unlines
+      return $ unlines'With r
         ["if (" ++ condCode ++ ") {"
         ,block tCode
         ,"} else {"
         ,block fCode
         ,"}"
-        ,r
         ]
 
     While cond body :>>= k -> do
@@ -75,11 +81,10 @@ genC c =
       bodyCode <- genC body
       r <- genC (k ())
 
-      return $ unlines
+      return $ unlines'With r
         ["while (" ++ condCode ++ ") {"
         ,block bodyCode
         ,"}"
-        ,r
         ]
 
     For (init :: Expr s c) loopTriple :>>= k -> do
@@ -91,16 +96,15 @@ genC c =
 
       initCode <- genExprC init
       condCode <- genExprC cond
-      updateCode <- genC update
+      updateCode <- genC0 False update
       bodyCode <- genC body
 
       r <- genC (k ())
 
-      return $ unlines
+      return $ unlines'With r
         ["for (" ++ genDecl ctype loopVar ++ " = " ++ initCode ++ "; " ++ condCode ++ "; " ++ updateCode ++ ") {"
-        ,bodyCode
+        ,block bodyCode
         ,"}"
-        ,r
         ]
 
 data Parens = WithParens | NoParens
@@ -147,6 +151,13 @@ genExprC = go NoParens
 parenthesize :: Parens -> String -> String
 parenthesize WithParens s = '(' : s ++ ")"
 parenthesize NoParens   s = s
+
+unlines' :: [String] -> String
+unlines' = concat . intersperse "\n"
+
+unlines'With :: String -> [String] -> String
+unlines'With "" xs = unlines' xs
+unlines'With r xs = unlines' (xs ++ [r])
 
 -- parens :: String -> String
 -- parens = ('(':) . (++")")
