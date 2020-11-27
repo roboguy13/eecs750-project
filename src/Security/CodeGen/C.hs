@@ -3,6 +3,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
 
+{-# OPTIONS_GHC -Wall #-}
+
 module Security.CodeGen.C
   where
 
@@ -18,6 +20,8 @@ import           Data.List
 genC :: forall a. Repr a => Cmd a -> CodeGen String
 genC c =
   case view c of
+    Return x -> return "" -- Commands cannot have values in this subset of C
+
     AllocSecret size :>>= k -> do
       name <- freshName @Secret
       let d = genDecl ctype name
@@ -40,12 +44,22 @@ genC c =
 
     Assign (Var n) e :>>= k -> do
       eCode <- genExprC e
-      return $ unlines [stmt [emitName n, "=", eCode]]
+      r <- genC (k ())
+      return $ unlines [stmt [emitName n, "=", eCode], r]
+
+    -- Assign x@(Index _ _) y :>>= k -> do
+    Assign x y :>>= k -> do
+      xCode <- genExprC x
+      yCode <- genExprC y
+      r <- genC (k ())
+      return $ unlines [stmt [xCode, "=", yCode], r]
 
     IfThenElse cond t f :>>= k -> do
       condCode <- genExprC cond
       tCode <- genC t
       fCode <- genC f
+
+      r <- genC (k ())
 
       return $ unlines
         ["if (" ++ condCode ++ ") {"
@@ -53,15 +67,19 @@ genC c =
         ,"} else {"
         ,block fCode
         ,"}"
+        ,r
         ]
 
     While cond body :>>= k -> do
       condCode <- genExprC cond
       bodyCode <- genC body
+      r <- genC (k ())
+
       return $ unlines
         ["while (" ++ condCode ++ ") {"
         ,block bodyCode
         ,"}"
+        ,r
         ]
 
     For (init :: Expr s c) loopTriple :>>= k -> do
@@ -76,10 +94,13 @@ genC c =
       updateCode <- genC update
       bodyCode <- genC body
 
+      r <- genC (k ())
+
       return $ unlines
         ["for (" ++ genDecl ctype loopVar ++ " = " ++ initCode ++ "; " ++ condCode ++ "; " ++ updateCode ++ ") {"
         ,bodyCode
         ,"}"
+        ,r
         ]
 
 data Parens = WithParens | NoParens
@@ -172,7 +193,38 @@ example4 = do
 example5 :: Cmd ()
 example5 = do
   x <- decl (1 :: Int)
-  for (0 :: Expr Public Int)
-    (\i -> ((i <? 10), (i += 1)
-           ,x += 1))
+  for (0 :: Expr Public Int) (\i -> ((i <? 10), (i += 1),
+    x += 1))
+
+example6 :: Cmd ()
+example6 = do
+  arrayA <- allocSecret @Int 8
+  arrayB <- allocSecret @Int 8
+
+  for (0 :: Expr Secret Int) (\i -> ((i <? 8), (i += 1), do
+    (arrayA ! i) .= (arrayB ! i)
+    ))
+
+-- example7 :: Cmd ()
+-- example7 = do
+--   arrayA <- allocPublic @Int 8
+--   arrayB <- allocSecret @Int 8
+--   for (0 :: Expr Secret Int) (\i -> ((i <? 8), (i += 1), do
+--     (arrayA ! i) .= (arrayB ! i)
+--     ))
+
+example8 :: Cmd ()
+example8 = do
+  secretArray <- allocSecret @Int 8
+  publicArray <- allocPublic @Int 8
+
+  for (0 :: Expr Public Int) (\i -> ((i <? 8), (i += 1), do
+
+    leak <- decl (0 :: Int)
+
+    for (0 :: Expr Secret Int) (\j -> ((j <? (secretArray ! i)), (j += 1), do
+      leak += 1
+      ))
+    (publicArray ! i) .= leak
+    ))
 

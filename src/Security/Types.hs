@@ -30,7 +30,7 @@ data CmdF a where
 
   NameFFI :: forall a. String -> CmdF a
 
-  IfThenElse :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd a -> CmdF a
+  IfThenElse :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd a -> CmdF ()
   While :: forall s a. Repr a => Expr s Bool -> Cmd a -> CmdF ()
   For :: forall s a. (Repr a) => Expr s a -> (Expr s a -> (Expr s Bool, Cmd (), Cmd ())) -> CmdF ()
 
@@ -52,7 +52,7 @@ x .= y = singleton (Assign x y)
 nameFFI :: forall a. String -> Cmd a
 nameFFI = singleton . NameFFI @a
 
-ifThenElse :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd a -> Cmd a
+ifThenElse :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd a -> Cmd ()
 ifThenElse c t f = singleton (IfThenElse c t f)
 
 while :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd ()
@@ -116,6 +116,8 @@ var = Var
 (&&?) = And
 (||?) = Or
 
+(!) :: forall sA sB a. (Repr a, (sB :<= sA) ~ True) => Expr sA (Ptr a) -> Expr sB Int -> Expr sA a
+(!) = Index
 
 
 instance (SingI s, Num a, Repr a) => Num (Expr s a) where
