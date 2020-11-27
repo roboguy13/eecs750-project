@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 
 {-# OPTIONS_GHC -Wall #-}
 
@@ -29,17 +30,20 @@ genC0 withSemi c =
   case view c of
     Return x -> return "" -- Commands cannot have values in this subset of C
 
-    AllocSecret size :>>= k -> do
+    AllocSecret size :>>= (k :: Expr s b -> _) -> do
       name <- freshName @Secret
       let d = genDecl ctype name
+          alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
       r <- genC (k (Var name))
-      return $ unlines'With r [stmt' withSemi [d]]
 
-    AllocPublic size :>>= k -> do
+      return $ unlines'With r [stmt' withSemi [d, "=", alloc]]
+
+    AllocPublic size :>>= (k :: Expr s b -> _) -> do
       name <- freshName @Public
       let d = genDecl ctype name
+          alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
       r <- genC (k (Var name))
-      return $ unlines'With r [stmt' withSemi [d]]
+      return $ unlines'With r [stmt' withSemi [d, "=", alloc]]
 
     Decl x :>>= k -> do
       name <- freshName @Public
