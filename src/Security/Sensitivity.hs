@@ -3,23 +3,38 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Security.Sensitivity where
 
 import           GHC.TypeLits
+import           Data.Proxy
+import           Security.Sing
 
 data Sensitivity = Public | Secret
 
-data family Sing (a :: k)
+data instance Sing (a :: Sensitivity) where
+  PublicSing :: Sing Public
+  SecretSing :: Sing Secret
 
-class SingI a where
-  sing :: Sing a
+instance SingI Public where
+  sing = PublicSing
 
-data instance Sing Public = PublicSing
-data instance Sing Secret = SecretSing
+instance SingI Secret where
+  sing = SecretSing
 
-instance SingI Public where sing = PublicSing
-instance SingI Secret where sing = SecretSing
+instance SingKind Sensitivity where
+  type Demote Sensitivity = Sensitivity
+
+  fromSing PublicSing = Public
+  fromSing SecretSing = Secret
+
+  toSing Public = SomeSing PublicSing
+  toSing Secret = SomeSing SecretSing
+
+  singInstance PublicSing = SingInstance
+  singInstance SecretSing = SingInstance
+
 
 type family Max sA sB where
   Max Public Public = Public

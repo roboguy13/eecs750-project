@@ -10,6 +10,7 @@ import           Security.Repr
 import           Security.Types
 import           Security.Sensitivity
 import           Security.CodeGen.Types
+import           Security.Sing
 
 import           Control.Monad.Operational
 import           Data.List
@@ -33,7 +34,7 @@ genC c =
       name <- freshName @Public
       let d = genDecl ctype name
           vName = Var name
-      xCode <- genExprC (Literal x)
+      xCode <- genExprC (Literal @Public x)
       r <- genC (k name)
       return $ unlines [stmt [d, "=", xCode], r]
 
@@ -63,8 +64,9 @@ genC c =
         ,"}"
         ]
 
-    For init loopTriple :>>= k -> do
-      loopVar <- freshName -- @Public
+    For (init :: Expr s c) loopTriple :>>= k -> do
+      let sensSing = exprSens init
+      loopVar <- withSing sensSing freshName
 
       let (cond, update, body) = loopTriple loopVar
 
@@ -82,16 +84,16 @@ genC c =
 data Parens = WithParens | NoParens
 
 
-genExprC :: forall s a. GenDecl s => Expr s a -> CodeGen String
+genExprC :: forall s a. Expr s a -> CodeGen String
 genExprC = go NoParens
   where
-    genBinOp :: forall s a. GenDecl s => Parens -> Expr s a -> Expr s a -> String -> CodeGen String
+    genBinOp :: forall s a. Parens -> Expr s a -> Expr s a -> String -> CodeGen String
     genBinOp parens x y op = do
       xCode <- go WithParens x
       yCode <- go WithParens y
       return . parenthesize parens $ unwords [xCode, op, yCode]
 
-    go :: forall s a. GenDecl s => Parens -> Expr s a -> CodeGen String
+    go :: forall s a. Parens -> Expr s a -> CodeGen String
     go _      (Literal x) = return $ lit x
     go parens (Var n)     = return $ emitName n
     go parens (Add x y)   = genBinOp parens x y "+"
@@ -165,4 +167,11 @@ example4 = do
   x <- decl (21 :: Int)
   while ((1 + 1) <? Var x)
     (Var x -= 1)
+
+example5 :: Cmd ()
+example5 = do
+  x <- decl (1 :: Int)
+  for (0 :: Expr Public Int)
+    (\i -> ((Var i <? 10), (Var i += 1)
+           ,Var x += 1))
 

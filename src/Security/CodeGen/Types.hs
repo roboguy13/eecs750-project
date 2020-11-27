@@ -4,17 +4,23 @@
 {-# LANGUAGE DataKinds #-}
 
 module Security.CodeGen.Types
-  (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, stmt, block)
+  (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, nameSens, stmt, block)
   where
 
 import           GHC.Types (Type)
 import           Control.Monad.State
 import           Security.Sensitivity
+import           Security.Sing
 import           Data.List
 
 -- | Do not export the value contructor here:
-newtype Name (s :: Sensitivity) (a :: Type) = Name String
-  deriving (Eq, Ord)
+data Name (s :: Sensitivity) (a :: Type) = Name (Sing s) String
+
+instance Eq (Name s a) where
+  Name _ x == Name _ y = x == y
+
+instance Ord (Name s a) where
+  compare (Name _ x) (Name _ y) = compare x y
 
 type Uniq = Int
 
@@ -31,18 +37,21 @@ newUniq = do
   modify (+1)
   return curr
 
-newNameWith :: forall s a. String -> CodeGen (Name s a)
+newNameWith :: forall s a. SingI s => String -> CodeGen (Name s a)
 newNameWith readableStr = do
   uniq <- newUniq
-  return (Name ("_sec_" <> readableStr <> "_" <> show uniq))
+  return (Name sing ("_sec_" <> readableStr <> "_" <> show uniq))
 
-freshName :: forall s a. CodeGen (Name s a)
+freshName :: forall s a. SingI s => CodeGen (Name s a)
 freshName = do
   uniq <- newUniq
-  return (Name ("_fresh_sec_" <> show uniq))
+  return (Name sing ("_fresh_sec_" <> show uniq))
 
 emitName :: forall s a. Name s a -> String
-emitName (Name n) = n
+emitName (Name _ n) = n
+
+nameSens :: forall s a. Name s a -> Sing s
+nameSens (Name sens _) = sens
 
 stmt :: [String] -> String
 stmt = (++";") . unwords
