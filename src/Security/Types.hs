@@ -20,6 +20,10 @@ import           Security.Sing
 
 
 -- TODO: Add a mechanism for "Secret" lambdas?
+--
+-- TODO: Add another type parameter to represent names, which can "start
+-- out" as 'Void' and then a function fills in the names (annotating the
+-- AST with names) to be used by the code generator and the analysis tool?
 data CmdF a where
   AllocSecret :: forall a. Repr a => Int -> CmdF (Expr Secret (Ptr a))
   AllocPublic :: forall a. Repr a => Int -> CmdF (Expr Public (Ptr a))

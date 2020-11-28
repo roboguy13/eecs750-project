@@ -2,9 +2,10 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 module Security.CodeGen.Types
-  (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, nameSens, stmt, block)
+  (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, nameSens, stmt, block, SomeName, mkSomeName, someNameSens, withSomeName, emitSomeName)
   where
 
 import           GHC.Types (Type)
@@ -15,6 +16,17 @@ import           Data.List
 
 -- | Do not export the value contructor here:
 data Name (s :: Sensitivity) (a :: Type) = Name (Sing s) String
+
+data SomeName = forall s a. SomeName (Name s a)
+
+mkSomeName :: Name s a -> SomeName
+mkSomeName = SomeName
+
+someNameSens :: SomeName -> Sensitivity
+someNameSens (SomeName n) = fromSing $ nameSens n
+
+withSomeName :: SomeName -> (forall s a. Name s a -> r) -> r
+withSomeName (SomeName n) f = f n
 
 instance Eq (Name s a) where
   Name _ x == Name _ y = x == y
@@ -49,6 +61,9 @@ freshName = do
 
 emitName :: forall s a. Name s a -> String
 emitName (Name _ n) = n
+
+emitSomeName :: SomeName -> String
+emitSomeName (SomeName n) = emitName n
 
 nameSens :: forall s a. Name s a -> Sing s
 nameSens (Name sens _) = sens

@@ -18,10 +18,6 @@ import           Security.Sing
 import           Control.Monad.Operational
 import           Data.List
 
-stmt' :: Bool -> [String] -> String
-stmt' False = unwords
-stmt' True  = stmt
-
 genC :: forall a. Repr a => Cmd a -> CodeGen String
 genC = genC0 True
 
@@ -163,8 +159,9 @@ unlines'With :: String -> [String] -> String
 unlines'With "" xs = unlines' xs
 unlines'With r xs = unlines' (xs ++ [r])
 
--- parens :: String -> String
--- parens = ('(':) . (++")")
+stmt' :: Bool -> [String] -> String
+stmt' False = unwords
+stmt' True  = stmt
 
 entryPoint :: CodeGen String -> CodeGen String
 entryPoint = fmap go
