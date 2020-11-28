@@ -6,7 +6,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 
 module Security.CodeGen.Types
-  (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, nameSens, stmt, block, SomeName, mkSomeName, someNameSens, withSomeName, emitSomeName)
+  (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, nameSens, stmt, block, SomeName, mkSomeName, someNameSens, withSomeName, emitSomeName, emitSomeNameDOT)
   where
 
 import           GHC.Types (Type)
@@ -76,6 +76,12 @@ emitName (Name _ n) = n
 
 emitSomeName :: SomeName -> String
 emitSomeName (SomeName n) = emitName n
+
+emitSomeNameDOT :: SomeName -> String
+emitSomeNameDOT sn =
+  case someNameSens sn of
+    Secret -> unwords [emitSomeName sn, "[shape=box]"]
+    Public -> emitSomeName sn
 
 nameSens :: forall s a. Name s a -> Sing s
 nameSens (Name sens _) = sens

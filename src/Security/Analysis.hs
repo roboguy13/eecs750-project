@@ -11,6 +11,7 @@ import           Security.CodeGen.Types
 
 import           Security.CodeGen.C
 import           Security.CodeGen
+import           Security.Analysis.DOT
 
 import           Control.Monad.Operational
 import           Control.Applicative
