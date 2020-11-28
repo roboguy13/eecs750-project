@@ -14,59 +14,61 @@ import           Security.Types
 import           Security.Sensitivity
 import           Security.CodeGen.Types
 import           Security.Sing
+import           Security.CodeGen
 
+import           Control.Monad
 import           Control.Monad.Operational
 import           Data.List
 
 genC :: forall a. Repr a => Cmd a -> CodeGen String
-genC = genC0 True
+genC = genCNamed <=< genNames
 
-genC0 :: forall a. Repr a => Bool -> Cmd a -> CodeGen String
+genCNamed :: forall a. Repr a => NamedCmd a -> CodeGen String
+genCNamed = genC0 True
+
+genC0 :: forall a. Repr a => Bool -> NamedCmd a -> CodeGen String
 genC0 withSemi c =
   case view c of
     Return x -> return "" -- Commands cannot have values in this subset of C
 
-    AllocSecret size :>>= (k :: Expr s b -> _) -> do
-      name <- freshName @Secret
+    AllocSecret name size :>>= (k :: Expr s b -> _) -> do
       let d = genDecl ctype name
           alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
-      r <- genC (k (Var name))
+      r <- genCNamed (k (Var name))
 
       return $ unlines'With r [stmt' withSemi [d, "=", alloc]]
 
-    AllocPublic size :>>= (k :: Expr s b -> _) -> do
-      name <- freshName @Public
+    AllocPublic name size :>>= (k :: Expr s b -> _) -> do
       let d = genDecl ctype name
           alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
-      r <- genC (k (Var name))
+      r <- genCNamed (k (Var name))
       return $ unlines'With r [stmt' withSemi [d, "=", alloc]]
 
-    Decl x :>>= k -> do
-      name <- freshName @Public
+    Decl name x :>>= k -> do
       let d = genDecl ctype name
           vName = Var name
       xCode <- genExprC (Literal @Public x)
-      r <- genC (k vName)
+      r <- genCNamed (k vName)
       return $ unlines'With r [stmt' withSemi [d, "=", xCode]]
 
     Assign (Var n) e :>>= k -> do
       eCode <- genExprC e
-      r <- genC (k ())
+      r <- genCNamed (k ())
       return $ unlines'With r [stmt' withSemi [emitName n, "=", eCode]]
 
     -- Assign x@(Index _ _) y :>>= k -> do
     Assign x y :>>= k -> do
       xCode <- genExprC x
       yCode <- genExprC y
-      r <- genC (k ())
+      r <- genCNamed (k ())
       return $ unlines'With r [stmt' withSemi [xCode, "=", yCode]]
 
     IfThenElse cond t f :>>= k -> do
       condCode <- genExprC cond
-      tCode <- genC t
-      fCode <- genC f
+      tCode <- genCNamed t
+      fCode <- genCNamed f
 
-      r <- genC (k ())
+      r <- genCNamed (k ())
 
       return $ unlines'With r
         ["if (" ++ condCode ++ ") {"
@@ -78,8 +80,8 @@ genC0 withSemi c =
 
     While cond body :>>= k -> do
       condCode <- genExprC cond
-      bodyCode <- genC body
-      r <- genC (k ())
+      bodyCode <- genCNamed body
+      r <- genCNamed (k ())
 
       return $ unlines'With r
         ["while (" ++ condCode ++ ") {"
@@ -87,19 +89,19 @@ genC0 withSemi c =
         ,"}"
         ]
 
-    For (init :: Expr s c) loopTriple :>>= k -> do
+    For loopVar (init :: Expr s c) loopTriple :>>= k -> do
       let sensSing = exprSens init
-      loopVar <- withSing sensSing freshName
+      -- loopVar <- withSing sensSing freshName
       let loopExpr = withSing sensSing Var loopVar
 
-      let (cond, update, body) = loopTriple loopExpr
+      let (cond, update, body) = loopTriple () --loopExpr
 
       initCode <- genExprC init
       condCode <- genExprC cond
       updateCode <- genC0 False update
-      bodyCode <- genC body
+      bodyCode <- genCNamed body
 
-      r <- genC (k ())
+      r <- genCNamed (k ())
 
       return $ unlines'With r
         ["for (" ++ genDecl ctype loopVar ++ " = " ++ initCode ++ "; " ++ condCode ++ "; " ++ updateCode ++ ") {"

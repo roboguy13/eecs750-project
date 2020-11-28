@@ -24,30 +24,42 @@ import           Security.Sing
 -- TODO: Add another type parameter to represent names, which can "start
 -- out" as 'Void' and then a function fills in the names (annotating the
 -- AST with names) to be used by the code generator and the analysis tool?
-data CmdF a where
-  AllocSecret :: forall a. Repr a => Int -> CmdF (Expr Secret (Ptr a))
-  AllocPublic :: forall a. Repr a => Int -> CmdF (Expr Public (Ptr a))
+data CmdF (name :: Sensitivity -> Type -> Type) a where
+  AllocSecret :: forall a name. Repr a => name Secret (Ptr a) -> Int -> CmdF name (Expr Secret (Ptr a))
+  AllocPublic :: forall a name. Repr a => name Public (Ptr a) -> Int -> CmdF name (Expr Public (Ptr a))
 
-  Decl :: forall a. Repr a => a -> CmdF (Expr Public a)
-  Assign :: forall s a. Repr a => Expr s a -> Expr s a -> CmdF ()  -- | memcpy's arrays
+  Decl :: forall a name. Repr a => name Public a -> a -> CmdF name (Expr Public a)
+  Assign :: forall s a name. Repr a => Expr s a -> Expr s a -> CmdF name ()  -- | memcpy's arrays
   -- Memcpy :: forall s a. Expr s (Array a) -> Expr s (Array a) ->
 
-  NameFFI :: forall a. String -> CmdF a
+  NameFFI :: forall a name. String -> CmdF name a
 
-  IfThenElse :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd a -> CmdF ()
-  While :: forall s a. Repr a => Expr s Bool -> Cmd a -> CmdF ()
-  For :: forall s a. (Repr a) => Expr s a -> (Expr s a -> (Expr s Bool, Cmd (), Cmd ())) -> CmdF ()
+  IfThenElse :: forall s a name. Repr a => Expr s Bool -> Cmd0 name a -> Cmd0 name a -> CmdF name ()
+  While :: forall s a name. Repr a => Expr s Bool -> Cmd0 name a -> CmdF name ()
+  For :: forall s a name. (Repr a) => name s a -> Expr s a -> (NameArg name s a -> (Expr s Bool, Cmd0 name (), Cmd0 name ())) -> CmdF name ()
 
-type Cmd = Program CmdF
+data NoName (s :: Sensitivity) a = NoName
+
+-- TODO: Figure out if there is a more straightforward way to do this
+-- (maybe without a type family like this one)
+type family NameArg a (s :: Sensitivity) t where
+  NameArg NoName s t = Expr s t
+  NameArg Name   s t = ()
+
+type Cmd0 name = Program (CmdF name)
+
+type Cmd = Program (CmdF NoName)
+
+type NamedCmd = Program (CmdF Name)
 
 allocSecret :: forall a. Repr a => Int -> Cmd (Expr Secret (Ptr a))
-allocSecret = singleton . AllocSecret @a
+allocSecret = singleton . AllocSecret @a NoName
 
 allocPublic :: forall a. Repr a => Int -> Cmd (Expr Public (Ptr a))
-allocPublic = singleton . AllocPublic @a
+allocPublic = singleton . AllocPublic @a NoName
 
 decl :: forall a. Repr a => a -> Cmd (Expr Public a)
-decl = singleton . Decl @a
+decl = singleton . Decl @a NoName
 
 infixr 0 .=
 (.=) :: forall s a. Repr a => Expr s a -> Expr s a -> Cmd ()
@@ -63,7 +75,7 @@ while :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd ()
 while c b = singleton (While c b)
 
 for :: forall s a. (Repr a) => Expr s a -> (Expr s a -> (Expr s Bool, Cmd (), Cmd ())) -> Cmd ()
-for initial loopTriple = singleton (For initial loopTriple)
+for initial loopTriple = singleton (For NoName initial loopTriple)
 
 
 -- type LVal s a = forall side. Expr side s a
