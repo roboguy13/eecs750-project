@@ -3,7 +3,7 @@
 module Security.Analysis.Tree where
 
 data Tree a   = Node a (Forest a)
-  deriving (Functor)
+  deriving (Functor, Eq, Ord, Show)
 
 type Forest a = [Tree a]
 
@@ -17,4 +17,16 @@ addChild parent child orig@(Node n xs)
 
 forestAddChild :: Eq a => a -> a -> Forest a -> Forest a
 forestAddChild parent child = map (addChild parent child)
+
+forestAddChildren :: Eq a => a -> [a] -> Forest a -> Forest a
+forestAddChildren parent children forest = foldr (\x acc -> forestAddChild parent x acc) forest children
+
+pruneWhenLeavesAre :: (a -> Bool) -> Forest a -> Forest a
+pruneWhenLeavesAre _ [] = []
+pruneWhenLeavesAre p (t : ts)
+  | leavesAre t =     pruneWhenLeavesAre p ts
+  | otherwise   = t : pruneWhenLeavesAre p ts
+  where
+    leavesAre (Node x []) = p x
+    leavesAre (Node x xs) = all leavesAre xs
 

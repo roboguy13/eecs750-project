@@ -3,6 +3,7 @@
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ExistentialQuantification #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Security.CodeGen.Types
   (Name, CodeGen, runCodeGen, newUniq, newNameWith, freshName, emitName, nameSens, stmt, block, SomeName, mkSomeName, someNameSens, withSomeName, emitSomeName)
@@ -17,7 +18,18 @@ import           Data.List
 -- | Do not export the value contructor here:
 data Name (s :: Sensitivity) (a :: Type) = Name (Sing s) String
 
+instance Show (Name s a) where
+  show (Name sens n) = "(Name " ++ show (fromSing sens) ++ " " ++ show n ++ ")"
+
 data SomeName = forall s a. SomeName (Name s a)
+
+deriving instance Show SomeName
+
+instance Eq SomeName where
+  SomeName (Name _ x) == SomeName (Name _ y) = x == y
+
+instance Ord SomeName where
+  compare (SomeName (Name _ x)) (SomeName (Name _ y)) = compare x y
 
 mkSomeName :: Name s a -> SomeName
 mkSomeName = SomeName
