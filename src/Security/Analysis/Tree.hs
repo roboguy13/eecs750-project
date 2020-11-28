@@ -1,6 +1,9 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Security.Analysis.Tree where
+
+import           Security.Util
 
 data Tree a   = Node a (Forest a)
   deriving (Functor, Eq, Ord, Show)
@@ -29,4 +32,24 @@ pruneWhenLeavesAre p (t : ts)
   where
     leavesAre (Node x []) = p x
     leavesAre (Node x xs) = all leavesAre xs
+
+-- | Generate a DOT format representation
+genDOT :: (a -> String) -> Forest a -> String
+genDOT showVal forest = unlines' (map (genTreeDOT showVal) forest)
+
+genTreeDOT :: forall a. (a -> String) -> Tree a -> String
+genTreeDOT showVal t =
+  unlines'
+    ["digraph {"
+    ,unlines' (go t)
+    ,"}"
+    ]
+  where
+    showNode (Node x _) = showVal x
+
+    go :: Tree a -> [String]
+    go (Node x []) = []
+    go (Node x ys) =
+      map (\y -> "  " ++ showVal x ++ " -> " ++ showNode y ++ ";") ys
+        ++ concatMap go ys
 

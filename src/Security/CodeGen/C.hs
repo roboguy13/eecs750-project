@@ -15,6 +15,7 @@ import           Security.Sensitivity
 import           Security.CodeGen.Types
 import           Security.Sing
 import           Security.CodeGen
+import           Security.Util
 
 import           Control.Monad
 import           Control.Monad.Operational
@@ -153,13 +154,6 @@ genExprC = go NoParens
 parenthesize :: Parens -> String -> String
 parenthesize WithParens s = '(' : s ++ ")"
 parenthesize NoParens   s = s
-
-unlines' :: [String] -> String
-unlines' = concat . intersperse "\n"
-
-unlines'With :: String -> [String] -> String
-unlines'With "" xs = unlines' xs
-unlines'With r xs = unlines' (xs ++ [r])
 
 stmt' :: Bool -> [String] -> String
 stmt' False = unwords
