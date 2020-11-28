@@ -23,26 +23,24 @@ data CType a where
 
 class Repr a where
   typeRepr :: CType a -> String
-  ptrTypeRepr :: CType a -> String
   ctype :: CType a
   lit :: a -> String
 
+ptrTypeRepr :: Repr a => CType (Ptr a) -> String
+ptrTypeRepr (CPtr ty) = typeRepr ty
 
 instance Repr Int where
   typeRepr m = "int"
-  ptrTypeRepr = typeRepr
   ctype = CInt
   lit = show
 
 instance Repr a => Repr (Ptr a) where
   typeRepr (CPtr ty) = typeRepr ty <> "*"
-  ptrTypeRepr (CPtr ty) = typeRepr ty
   ctype = CPtr ctype
 
 
 instance Repr Bool where
   typeRepr CBool = "bool"
-  ptrTypeRepr = typeRepr
   ctype = CBool
   lit True = "true"
   lit False = "false"
