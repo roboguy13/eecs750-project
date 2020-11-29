@@ -20,17 +20,31 @@ singleton x = Node x []
 addChild' :: Eq a => a -> Tree a -> Tree a -> Writer Progress (Tree a)
 addChild' parent child orig@(Node n xs)
   | n == parent = tell Progress >> return (Node n (union [child] xs))
+  -- | n == parent = tell Progress >> return (Node n (unionForests [child] xs))
   | otherwise   = Node <$> pure n <*> mapM (addChild' parent child) xs
 
 addChild :: Eq a => a -> Tree a -> Tree a -> Tree a
 addChild parent child t =
   fst $ runWriter (addChild' parent child t)
 
-newTree :: Eq a => a -> Forest a -> Forest a
-newTree x [] = [singleton x]
-newTree x orig@(origNode@(Node x' _):rest)
-  | x == x' = orig
-  | otherwise = origNode : newTree x rest
+newTreeEither :: Eq a => Tree a -> Forest a -> Either (Forest a) (Forest a)
+newTreeEither t [] = Right [t]
+newTreeEither t@(Node x xs) (origNode@(Node x' xs'):rest)
+  | x == x' = Left (Node x (xs `unionForests` xs') : rest)
+  | otherwise = do
+      case newTreeEither t xs' of
+        Right _ -> do
+          rest' <- newTreeEither t rest
+          return (origNode : rest')
+        Left forest' ->
+          Left (forest' ++ rest)
+          -- Left (Node x' forest':rest)
+
+newTree :: Eq a => Tree a -> Forest a -> Forest a
+newTree x t =
+  case newTreeEither x t of
+    Right t' -> t'
+    Left t' -> t'
 
 forestAddChild' :: Eq a => a -> Tree a -> Forest a -> Writer Progress (Forest a)
 forestAddChild' parent child = mapM (addChild' parent child)
@@ -53,7 +67,8 @@ unionForests (Node x xs:rest) forest =
   in
     if madeProgress w
       then unionForests rest forest'
-      else [Node x xs] `union` unionForests rest forest
+      else newTree (Node x xs) (unionForests rest forest)
+      -- else [Node x xs] `union` unionForests rest forest
       -- else Node x xs : unionForests rest forest
 
 pruneWhenLeavesAre :: (a -> Bool) -> Forest a -> Forest a

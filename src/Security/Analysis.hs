@@ -44,7 +44,7 @@ isSecretName sn =
 
 insertTreeIfSecret :: Forest SomeName -> SomeName -> Forest SomeName
 insertTreeIfSecret forest sn
-  | isSecretName sn = newTree sn forest
+  | isSecretName sn = newTree (Tree.singleton sn) forest
   | otherwise       = forest
 
 consIf :: (a -> Bool) -> a -> [a] -> [a]
@@ -53,7 +53,7 @@ consIf p x xs
   | otherwise = xs
 
 mkLeakForest :: NamedCmd a -> Forest SomeName
-mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
+mkLeakForest = {- pruneWhenLeavesAre isSecretName . -} go [] [] []
   where
     go :: [SomeName] -> [SomeName] -> Forest SomeName -> NamedCmd ty -> Forest SomeName
     go secretDeps {- dependencies from an enclosing control structure -} localNames forest c =

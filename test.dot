@@ -1,4 +1,28 @@
-digraph {
+digraph root {
+subgraph 1 {
   _fresh_sec_0 [shape=box];
-  _fresh_sec_0 -> _fresh_sec_3;
+  _fresh_sec_1 [shape=box];
+  _fresh_sec_0 -> _fresh_sec_1;
+  _fresh_sec_0 -> _fresh_sec_1;
+  _fresh_sec_1 -> _fresh_sec_4;
+  _fresh_sec_4 -> _fresh_sec_3;
+  _fresh_sec_4 -> _fresh_sec_2;
+}
+subgraph 2 {
+  _fresh_sec_1 [shape=box];
+  _fresh_sec_1 -> _fresh_sec_4;
+  _fresh_sec_4 -> _fresh_sec_3;
+  _fresh_sec_4 -> _fresh_sec_2;
+}
+subgraph 3 {
+  _fresh_sec_0 [shape=box];
+  _fresh_sec_1 [shape=box];
+  _fresh_sec_0 -> _fresh_sec_1;
+  _fresh_sec_0 -> _fresh_sec_1;
+  _fresh_sec_1 -> _fresh_sec_4;
+}
+subgraph 4 {
+  _fresh_sec_1 [shape=box];
+  _fresh_sec_1 -> _fresh_sec_4;
+}
 }
