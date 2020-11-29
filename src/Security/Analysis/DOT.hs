@@ -1,4 +1,5 @@
 module Security.Analysis.DOT
+  (genDOT)
   where
 
 import           Security.Analysis.Tree
@@ -10,12 +11,17 @@ import           Data.List
 
 -- | Generate a DOT format representation
 genDOT :: Forest SomeName -> String
-genDOT forest = unlines' (map genTreeDOT forest)
+genDOT forest =
+  unlines
+    ["digraph root {"
+    , unlines' (zipWith genTreeDOT [1..] forest)
+    , "}"
+    ]
 
-genTreeDOT :: Tree SomeName -> String
-genTreeDOT t =
+genTreeDOT :: Int -> Tree SomeName -> String
+genTreeDOT n t =
   unlines'
-    ["digraph {"
+    ["subgraph " <> show n <> " {"
     ,unlines' $ preprocess $ getNameList t
     ,unlines' (go t)
     ,"}"

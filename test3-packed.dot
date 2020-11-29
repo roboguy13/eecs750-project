@@ -1,0 +1,17 @@
+digraph root {
+	node [label="\N"];
+	subgraph 1 {
+		node [label="\N",
+			shape=""
+		];
+		_fresh_sec_0	[shape=box];
+		_fresh_sec_0 -> _fresh_sec_3;
+	}
+	subgraph 2 {
+		node [label="\N",
+			shape=""
+		];
+		_fresh_sec_5	[shape=box];
+		_fresh_sec_5 -> _fresh_sec_8;
+	}
+}
