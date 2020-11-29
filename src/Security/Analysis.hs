@@ -60,23 +60,23 @@ mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
       let isNonLocal sn = sn `notElem` localNames
           isSecretOrNonLocal = liftA2 (||) isSecretName isNonLocal
       in
-      case view c of
+      case viewCmd0 c of
         Return _ -> forest
 
         AllocSecret name size :>>= k ->
           let sn = mkSomeName name
           in
-          go secretDeps (sn : localNames) (insertTreeIfSecret forest sn) (k (Var name))
+          go secretDeps (sn : localNames) (insertTreeIfSecret forest sn) (mkCmd0 (k (Var name)))
 
         AllocPublic name size :>>= k ->
           let sn = mkSomeName name
           in
-          go secretDeps (sn : localNames) forest (k (Var name))
+          go secretDeps (sn : localNames) forest (mkCmd0 (k (Var name)))
 
         Decl name x :>>= k ->
           let sn = mkSomeName name
           in
-          go secretDeps (sn : localNames) (insertTreeIfSecret forest sn) (k (Var name))
+          go secretDeps (sn : localNames) (insertTreeIfSecret forest sn) (mkCmd0 (k (Var name)))
 
         Assign lhs rhs :>>= k ->
           let lhsSns = collectSomeNames lhs
@@ -85,7 +85,7 @@ mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
                   ++
                 foldr (\x acc -> forestAddChildren x (map Tree.singleton (filter isNonLocal lhsSns)) acc) forest secretDeps
           in
-          go secretDeps localNames forest' (k ())
+          go secretDeps localNames forest' (mkCmd0 (k ()))
 
         IfThenElse cond t f :>>= k ->
           let condSecretNames = filter isSecretName (collectSomeNames cond)
@@ -94,13 +94,13 @@ mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
               fForest = go secretDeps [] forest f
               forest' = unionForests tForest fForest
           in
-          go secretDeps localNames forest' (k ())
+          go secretDeps localNames forest' (mkCmd0 (k ()))
 
         While cond body :>>= k ->
           let condSecretNames = filter isSecretName (collectSomeNames cond)
               bodyForest = go condSecretNames [] forest body
           in
-          go secretDeps localNames bodyForest (k ())
+          go secretDeps localNames bodyForest (mkCmd0 (k ()))
 
         For loopVar (init :: Expr s c) loopTriple :>>= k ->
           let loopSn = mkSomeName loopVar
@@ -109,5 +109,5 @@ mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
               secretDeps' = condSecretNames ++ secretDeps
               forest' = go secretDeps' [loopSn] forest update `unionForests` go secretDeps' [loopSn] forest body
           in
-          go (consIf isSecretName loopSn secretDeps) localNames forest' (k ())
+          go (consIf isSecretName loopSn secretDeps) localNames forest' (mkCmd0 (k ()))
 

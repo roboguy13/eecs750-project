@@ -29,39 +29,39 @@ genCNamed = genC0 True
 
 genC0 :: forall a. Repr a => Bool -> NamedCmd a -> CodeGen String
 genC0 withSemi c =
-  case view c of
+  case viewCmd0 c of
     Return x -> return "" -- Commands cannot have values in this subset of C
 
     AllocSecret name size :>>= (k :: Expr s b -> _) -> do
       let d = genDecl ctype name
           alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
-      r <- genCNamed (k (Var name))
+      r <- genCNamed (mkCmd0 (k (Var name)))
 
       return $ unlines'With r [stmt' withSemi [d, "=", alloc]]
 
     AllocPublic name size :>>= (k :: Expr s b -> _) -> do
       let d = genDecl ctype name
           alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
-      r <- genCNamed (k (Var name))
+      r <- genCNamed (mkCmd0 (k (Var name)))
       return $ unlines'With r [stmt' withSemi [d, "=", alloc]]
 
     Decl name x :>>= k -> do
       let d = genDecl ctype name
           vName = Var name
       xCode <- genExprC (Literal @Public x)
-      r <- genCNamed (k vName)
+      r <- genCNamed (mkCmd0 (k vName))
       return $ unlines'With r [stmt' withSemi [d, "=", xCode]]
 
     Assign (Var n) e :>>= k -> do
       eCode <- genExprC e
-      r <- genCNamed (k ())
+      r <- genCNamed (mkCmd0 (k ()))
       return $ unlines'With r [stmt' withSemi [emitName n, "=", eCode]]
 
     -- Assign x@(Index _ _) y :>>= k -> do
     Assign x y :>>= k -> do
       xCode <- genExprC x
       yCode <- genExprC y
-      r <- genCNamed (k ())
+      r <- genCNamed (mkCmd0 (k ()))
       return $ unlines'With r [stmt' withSemi [xCode, "=", yCode]]
 
     IfThenElse cond t f :>>= k -> do
@@ -69,7 +69,7 @@ genC0 withSemi c =
       tCode <- genCNamed t
       fCode <- genCNamed f
 
-      r <- genCNamed (k ())
+      r <- genCNamed (mkCmd0 (k ()))
 
       return $ unlines'With r
         ["if (" ++ condCode ++ ") {"
@@ -82,7 +82,7 @@ genC0 withSemi c =
     While cond body :>>= k -> do
       condCode <- genExprC cond
       bodyCode <- genCNamed body
-      r <- genCNamed (k ())
+      r <- genCNamed (mkCmd0 (k ()))
 
       return $ unlines'With r
         ["while (" ++ condCode ++ ") {"
@@ -102,7 +102,7 @@ genC0 withSemi c =
       updateCode <- genC0 False update
       bodyCode <- genCNamed body
 
-      r <- genCNamed (k ())
+      r <- genCNamed (mkCmd0 (k ()))
 
       return $ unlines'With r
         ["for (" ++ genDecl ctype loopVar ++ " = " ++ initCode ++ "; " ++ condCode ++ "; " ++ updateCode ++ ") {"

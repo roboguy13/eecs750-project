@@ -13,48 +13,48 @@ import           Control.Monad.Operational
 
 genNames :: Cmd a -> CodeGen (NamedCmd a)
 genNames c =
-  case view c of
-    Return x -> return $ return x
+  case viewCmd0 c of
+    Return x -> return $ mkCmd0 $ return x
 
     AllocSecret NoName size :>>= k -> do
       name <- freshName @Secret
       let var = Var name
           r = k var
-      r' <- genNames r
+      r' <- genNames (mkCmd0 r)
 
-      return (singleton (AllocSecret name size) >> r')
+      return $ (toCmd0 (AllocSecret name size) `andThen` r')
 
     AllocPublic NoName size :>>= k -> do
       name <- freshName @Public
       let var = Var name
           r = k var
-      r' <- genNames r
+      r' <- genNames (mkCmd0 r)
 
-      return (singleton (AllocPublic name size) >> r')
+      return (toCmd0 (AllocPublic name size) `andThen` r')
 
     Decl NoName x :>>= k -> do
       name <- freshName @Public
 
       let var = Var name
           r = k var
-      r' <- genNames r
+      r' <- genNames (mkCmd0 r)
 
-      return (singleton (Decl name x) >> r')
+      return (toCmd0 (Decl name x) `andThen` r')
 
     Assign x y :>>= k -> do
-      r' <- genNames (k ())
-      return (singleton (Assign x y) >> r')
+      r' <- genNames (mkCmd0 (k ()))
+      return (toCmd0 (Assign x y) `andThen` r')
 
     IfThenElse cond t f :>>= k -> do
-      r' <- genNames (k ())
+      r' <- genNames (mkCmd0 (k ()))
       t' <- genNames t
       f' <- genNames f
-      return (singleton (IfThenElse cond t' f') >> r')
+      return (toCmd0 (IfThenElse cond t' f') `andThen` r')
 
     While cond body :>>= k -> do
-      r' <- genNames (k ())
+      r' <- genNames (mkCmd0 (k ()))
       body' <- genNames body
-      return (singleton (While cond body') >> r')
+      return (toCmd0 (While cond body') `andThen` r')
 
     For NoName (init :: Expr s c) loopTriple :>>= k -> do
       let sensSing = exprSens init
@@ -66,7 +66,7 @@ genNames c =
       update' <- genNames update
       body' <- genNames body
 
-      r' <- genNames (k ())
+      r' <- genNames (mkCmd0 (k ()))
 
-      return (singleton (For loopVar init (\() -> (cond, update', body'))) >> r')
+      return (toCmd0 (For loopVar init (\() -> (cond, update', body'))) `andThen` r')
 

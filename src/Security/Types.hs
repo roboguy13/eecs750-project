@@ -7,8 +7,26 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Security.Types
+  (CmdF(..), NoName(..), NameArg, Expr(..)
+  ,Cmd0
+  ,mkCmd0
+  ,toCmd0
+  ,NamedCmd
+  ,Cmd
+  ,viewCmd0
+  ,andThen
+  ,allocSecret, allocPublic, decl, (.=)
+  ,nameFFI
+  ,ifThenElse
+  ,while
+  ,for
+  ,(+=), (-=)
+  ,(==?), (<?), (>?), (&&?), (||?), (!)
+  ,exprSens
+  )
   where
 
 import           GHC.Types (Type)
@@ -46,36 +64,61 @@ type family NameArg a (s :: Sensitivity) t where
   NameArg NoName s t = Expr s t
   NameArg Name   s t = ()
 
-type Cmd0 name = Program (CmdF name)
+newtype Cmd0 name a = Cmd0 { unCmd0 :: Program (CmdF name) a }
 
-type Cmd = Program (CmdF NoName)
+mkCmd0 :: Program (CmdF name) a -> Cmd0 name a
+mkCmd0 = Cmd0
 
-type NamedCmd = Program (CmdF Name)
+toCmd0 :: CmdF name a -> Cmd0 name a
+toCmd0 = Cmd0 . singleton
+
+-- | NOTE: This is only for internal use. Careless use of this function
+-- could cause silent name collisions.
+andThen :: Cmd0 name a -> Cmd0 name b -> Cmd0 name b
+andThen (Cmd0 x) (Cmd0 y) = Cmd0 (x >> y)
+
+type Cmd = Cmd0 NoName
+
+type NamedCmd = Cmd0 Name
+
+instance Functor Cmd where
+  fmap f (Cmd0 c) = Cmd0 (fmap f c)
+
+instance Applicative Cmd where
+  pure = Cmd0 . pure
+  Cmd0 f <*> Cmd0 x = Cmd0 (f <*> x)
+
+instance Monad Cmd where
+  return = pure
+  Cmd0 x >>= f = Cmd0 (x >>= (unCmd0 . f))
+
+viewCmd0 :: Cmd0 name a -> ProgramView (CmdF name) a
+viewCmd0 (Cmd0 c) = view c
 
 allocSecret :: forall a. Repr a => Int -> Cmd (Expr Secret (Ptr a))
-allocSecret = singleton . AllocSecret @a NoName
+allocSecret = Cmd0 . singleton . AllocSecret @a NoName
 
 allocPublic :: forall a. Repr a => Int -> Cmd (Expr Public (Ptr a))
-allocPublic = singleton . AllocPublic @a NoName
+allocPublic = Cmd0 . singleton . AllocPublic @a NoName
 
 decl :: forall a. Repr a => a -> Cmd (Expr Public a)
-decl = singleton . Decl @a NoName
+decl = Cmd0 . singleton . Decl @a NoName
 
 infixr 0 .=
 (.=) :: forall s a. Repr a => Expr s a -> Expr s a -> Cmd ()
-x .= y = singleton (Assign x y)
+x .= y = Cmd0 $ singleton (Assign x y)
 
 nameFFI :: forall a. String -> Cmd a
-nameFFI = singleton . NameFFI @a
+nameFFI = Cmd0 . singleton . NameFFI @a
 
 ifThenElse :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd a -> Cmd ()
-ifThenElse c t f = singleton (IfThenElse c t f)
+ifThenElse c t f = Cmd0 $ singleton (IfThenElse c t f)
 
 while :: forall s a. Repr a => Expr s Bool -> Cmd a -> Cmd ()
-while c b = singleton (While c b)
+while c b = Cmd0 $ singleton (While c b)
 
 for :: forall s a. (Repr a) => Expr s a -> (Expr s a -> (Expr s Bool, Cmd (), Cmd ())) -> Cmd ()
-for initial loopTriple = singleton (For NoName initial loopTriple)
+for initial loopTriple = Cmd0 $ singleton (For NoName initial loopTriple)
 
 
 -- type LVal s a = forall side. Expr side s a
