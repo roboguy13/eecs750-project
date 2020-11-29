@@ -236,3 +236,21 @@ example8 = do
     (publicArray ! i) .= leak
     ))
 
+example9 :: Cmd ()
+example9 = do
+  secretArrayA <- allocSecret @Int 8
+  secretArrayB <- allocSecret @Int 8
+  publicArray <- allocPublic @Int 8
+
+  secretArrayB .= secretArrayA
+
+  for (0 :: Expr Public Int) (\i -> ((i <? 8), (i += 1), do
+
+    leak <- decl (0 :: Int)
+
+    for (0 :: Expr Secret Int) (\j -> ((j <? (secretArrayB ! i)), (j += 1), do
+      leak += 1
+      ))
+    (publicArray ! i) .= leak
+    ))
+

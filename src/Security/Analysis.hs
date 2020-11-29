@@ -81,7 +81,7 @@ mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
         Assign lhs rhs :>>= k ->
           let lhsSns = collectSomeNames lhs
               forest' =
-                foldr (\x acc -> forestAddChildren x (map Tree.singleton lhsSns) acc) forest (filter isSecretName (collectSomeNames rhs))
+                foldr (\x acc -> forestAddChildren x (map Tree.singleton lhsSns) acc) forest (collectSomeNames rhs)
                   ++
                 foldr (\x acc -> forestAddChildren x (map Tree.singleton (filter isNonLocal lhsSns)) acc) forest secretDeps
           in
@@ -94,13 +94,14 @@ mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
               fForest = go secretDeps [] forest f
               forest' = unionForests tForest fForest
           in
-          go secretDeps localNames forest' (mkCmd0 (k ()))
+          go secretDeps' localNames forest' (mkCmd0 (k ()))
 
         While cond body :>>= k ->
           let condSecretNames = filter isSecretName (collectSomeNames cond)
               bodyForest = go condSecretNames [] forest body
+              secretDeps' = condSecretNames ++ secretDeps
           in
-          go secretDeps localNames bodyForest (mkCmd0 (k ()))
+          go secretDeps' localNames bodyForest (mkCmd0 (k ()))
 
         For loopVar (init :: Expr s c) loopTriple :>>= k ->
           let loopSn = mkSomeName loopVar

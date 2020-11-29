@@ -20,7 +20,7 @@ singleton x = Node x []
 addChild' :: Eq a => a -> Tree a -> Tree a -> Writer Progress (Tree a)
 addChild' parent child orig@(Node n xs)
   | n == parent = tell Progress >> return (Node n (union [child] xs))
-  | otherwise   = return orig
+  | otherwise   = Node <$> pure n <*> mapM (addChild' parent child) xs
 
 addChild :: Eq a => a -> Tree a -> Tree a -> Tree a
 addChild parent child t =
