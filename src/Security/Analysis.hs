@@ -44,7 +44,7 @@ isSecretName sn =
 
 insertTreeIfSecret :: Forest SomeName -> SomeName -> Forest SomeName
 insertTreeIfSecret forest sn
-  | isSecretName sn = Tree.singleton sn : forest
+  | isSecretName sn = newTree sn forest
   | otherwise       = forest
 
 consIf :: (a -> Bool) -> a -> [a] -> [a]
@@ -81,9 +81,9 @@ mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
         Assign lhs rhs :>>= k ->
           let lhsSns = collectSomeNames lhs
               forest' =
-                foldr (\x acc -> forestAddChildren x lhsSns acc) forest (filter isSecretName (collectSomeNames rhs))
+                foldr (\x acc -> forestAddChildren x (map Tree.singleton lhsSns) acc) forest (filter isSecretName (collectSomeNames rhs))
                   ++
-                foldr (\x acc -> forestAddChildren x (filter isNonLocal lhsSns) acc) forest secretDeps
+                foldr (\x acc -> forestAddChildren x (map Tree.singleton (filter isNonLocal lhsSns)) acc) forest secretDeps
           in
           go secretDeps localNames forest' (k ())
 
@@ -92,7 +92,7 @@ mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
               secretDeps' = condSecretNames ++ secretDeps
               tForest = go secretDeps [] forest t
               fForest = go secretDeps [] forest f
-              forest' = union tForest fForest
+              forest' = unionForests tForest fForest
           in
           go secretDeps localNames forest' (k ())
 
@@ -107,7 +107,7 @@ mkLeakForest = pruneWhenLeavesAre isSecretName . go [] [] []
               (cond, update, body) = loopTriple ()
               condSecretNames = filter isSecretName (collectSomeNames cond)
               secretDeps' = condSecretNames ++ secretDeps
-              forest' = go secretDeps' [loopSn] forest update `union` go secretDeps' [loopSn] forest body
+              forest' = go secretDeps' [loopSn] forest update `unionForests` go secretDeps' [loopSn] forest body
           in
           go (consIf isSecretName loopSn secretDeps) localNames forest' (k ())
 
