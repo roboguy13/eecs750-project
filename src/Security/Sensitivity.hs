@@ -12,7 +12,7 @@ import           GHC.TypeLits
 import           Data.Proxy
 import           Security.Sing
 
-data Sensitivity = Public | Secret deriving Show
+data Sensitivity = Public | Secret deriving (Show, Eq, Ord)
 
 data instance Sing (a :: Sensitivity) where
   PublicSing :: Sing Public

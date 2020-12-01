@@ -52,9 +52,60 @@ consIf p x xs
   | p x = x : xs
   | otherwise = xs
 
+-- | The 'Sensitivity' here depends on whether the scope depends on
+-- a secret variable in a condition. It starts out as 'Public' and gets
+-- updated as necessary.
+type Scope = [(Sensitivity, [SomeName])]
+
+emptyScope :: Scope
+emptyScope = [(Public, [])]
+
+scopeAddName :: Scope -> SomeName -> Scope
+scopeAddName [] newName = [(Public, [newName])]
+scopeAddName (ns:nss) newName = (fmap (newName:)ns) : nss
+
+scopePush :: Sensitivity -> Scope -> Scope
+scopePush sens [] = emptyScope -- = ((Public, []:))
+scopePush sens ((_oldSens, ns):nss) = (Public, []) : (sens, ns) : nss
+
+scopePop :: Scope -> Scope
+scopePop = drop 1
+
+isInLocalScope :: Scope -> SomeName -> Bool
+isInLocalScope [] name = False
+isInLocalScope ((_, ns):_) name = name `elem` ns
+
+isInSecretScope :: Scope -> SomeName -> Bool
+isInSecretScope scope name = any (name `elem`) . map snd $ filter ((== Secret) . fst) scope
+
 mkLeakForest :: NamedCmd a -> Forest SomeName
-mkLeakForest = {- pruneWhenLeavesAre isSecretName . -} go [] [] []
+-- mkLeakForest = {- pruneWhenLeavesAre isSecretName . -} go [] [] []
+mkLeakForest = go emptyScope []
   where
+    go :: Scope -> Forest SomeName -> NamedCmd ty -> Forest SomeName
+    go scope forest c =
+      case viewCmd0 c of
+        Return _ -> forest
+
+        AllocSecret name size :>>= k ->
+          let sn = mkSomeName name
+          in
+          go (scopeAddName scope sn) (insertTreeIfSecret forest sn) (mkCmd0 (k (Var name)))
+
+        AllocPublic name size :>>= k ->
+          let sn = mkSomeName name
+          in
+          go (scopeAddName scope sn) forest (mkCmd0 (k (Var name)))
+
+        Decl name x :>>= k ->
+          let sn = mkSomeName name
+          in
+          go (scopeAddName scope sn) forest (mkCmd0 (k (Var name)))
+
+        Assign lhs rhs :>>= k ->
+          let lhsSns = collectSomeNames lhs
+          in undefined
+{-
     go :: [SomeName] -> [SomeName] -> Forest SomeName -> NamedCmd ty -> Forest SomeName
     go secretDeps {- dependencies from an enclosing control structure -} localNames forest c =
       let isNonLocal sn = sn `notElem` localNames
@@ -111,4 +162,4 @@ mkLeakForest = {- pruneWhenLeavesAre isSecretName . -} go [] [] []
               forest' = go secretDeps' [loopSn] forest update `unionForests` go secretDeps' [loopSn] forest body
           in
           go (consIf isSecretName loopSn secretDeps) localNames forest' (mkCmd0 (k ()))
-
+-}
