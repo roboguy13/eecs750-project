@@ -10,6 +10,8 @@ import           Control.Monad.Writer
 import           Data.List
 import qualified Data.Set as Set
 
+import Debug.Trace
+
 data Tree a   = Node a (Forest a)
   deriving (Functor, Eq, Ord, Show)
 
@@ -17,6 +19,14 @@ type Forest a = [Tree a]
 
 singleton :: a -> Tree a
 singleton x = Node x []
+
+-- addChild' :: Eq a => a -> Tree a -> Tree a -> Writer Progress (Tree a)
+-- addChild' parent child orig@(Node n []) =
+--   | n == parent = tell Progress >> return (Node n [child])
+--   | otherwise   = return orig
+-- addChild' parent child@(Node childN childCs) orig@(Node n (c:cs))
+--   | n == parent =
+--       if 
 
 addChild' :: Eq a => a -> Tree a -> Tree a -> Writer Progress (Tree a)
 addChild' parent child orig@(Node n xs)
@@ -28,12 +38,12 @@ addChild :: Eq a => a -> Tree a -> Tree a -> Tree a
 addChild parent child t =
   fst $ runWriter (addChild' parent child t)
 
-newTreeEither :: (Ord a, Eq a) => Tree a -> Forest a -> Either (Maybe (Forest a)) (Forest a)
+newTreeEither :: (Ord a, Eq a, Show a) => Tree a -> Forest a -> Either (Maybe (Forest a)) (Forest a)
 newTreeEither t [] = Right [t]
 newTreeEither t@(Node x xs) (origNode@(Node x' xs'):rest)
   | x == x' =
       if xs /= xs'
-        then Left $ Just (union [Node x (xs `unionForests` xs')] rest)
+        then Left Nothing --Left $ Just (union [Node x (xs `unionForests` xs')] rest)
         else Left Nothing
   | otherwise = do
       case newTreeEither t xs' of
@@ -42,15 +52,18 @@ newTreeEither t@(Node x xs) (origNode@(Node x' xs'):rest)
           return (union [origNode] rest')
         Left Nothing -> Left Nothing
         Left (Just forest') ->
-          Left $ Just (forest' ++ rest)
+          Left $ Just (forest' `unionForests` rest)
           -- Left (Node x' forest':rest)
 
-newTree :: (Ord a, Eq a) => Tree a -> Forest a -> Forest a
+nodeItem :: Tree a -> a
+nodeItem (Node x _) = x
+
+newTree :: (Ord a, Eq a, Show a) => Tree a -> Forest a -> Forest a
 newTree x t =
   case newTreeEither x t of
-    Right t' -> t'
+    Right t' -> traceShow ("newTree: " ++ show t') t'
     Left Nothing -> t
-    Left (Just t') -> t'
+    Left (Just t') -> traceShow ("newTree 2: " ++ show t') t'
 
 forestAddChild' :: (Ord a, Eq a) => a -> Tree a -> Forest a -> Writer Progress (Forest a)
 forestAddChild' parent child = mapM (addChild' parent child)
@@ -65,7 +78,7 @@ forestAddChildren parent children forest =
 forestAddChildren' :: (Ord a, Eq a) => a -> [Tree a] -> Forest a -> Writer Progress (Forest a)
 forestAddChildren' parent children forest = foldM (\acc x -> fastNub <$> forestAddChild' parent x acc) forest children
 
-unionForests :: (Ord a, Eq a) => Forest a -> Forest a -> Forest a
+unionForests :: (Ord a, Eq a, Show a) => Forest a -> Forest a -> Forest a
 unionForests [] forest = forest
 unionForests forest [] = forest
 unionForests (Node x xs:rest) forest =

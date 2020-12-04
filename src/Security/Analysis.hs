@@ -95,7 +95,7 @@ publicNonLocal :: Scope -> SomeName -> Maybe [SomeName]
 publicNonLocal scope sn =
   let enclosingScope = scopePop scope
   in
-    fmap fst $ find ((sn `elem`) . snd) enclosingScope
+    fmap (fastNub . fst) $ find ((sn `elem`) . snd) enclosingScope
 
 
 -- isInLocalScope :: Scope -> SomeName -> Bool
@@ -138,8 +138,8 @@ mkLeakForest = fastNub . go emptyScope []
           go (scopeAddName scope sn) forest (mkCmd0 (k (Var name)))
 
         Assign lhs rhs :>>= k ->
-          let lhsSns = collectSomeNames lhs
-              rhsSns = collectSomeNames rhs
+          let lhsSns = fastNub $ collectSomeNames lhs
+              rhsSns = fastNub $ collectSomeNames rhs
               -- forest' =
               --   foldr (\rhsSn -> forestAddChildren rhsSn (map Tree.singleton rhsSns))
               --         forest
@@ -154,21 +154,21 @@ mkLeakForest = fastNub . go emptyScope []
               let forest'' =
                     foldr (\p -> forestAddChildren p (map Tree.singleton lhsSns))
                           forest'
-                          secretDeps
+                          (fastNub secretDeps)
               in
               go scope forest'' (mkCmd0 (k ()))
             Nothing ->
               go scope forest' (mkCmd0 (k ()))
 
         IfThenElse cond t f :>>= k ->
-          let secretDeps = filter isSecretName $ collectSomeNames cond
+          let secretDeps = fastNub $ filter isSecretName $ collectSomeNames cond
               tForest = go (scopePush scope secretDeps) forest t
               fForest = go (scopePush scope secretDeps) forest f
           in
           go scope (tForest `unionForests` fForest) (mkCmd0 (k ()))
 
         While cond body :>>= k ->
-          let secretDeps = filter isSecretName $ collectSomeNames cond
+          let secretDeps = fastNub $ filter isSecretName $ collectSomeNames cond
               bodyForest = go (scopePush scope secretDeps) forest body
           in
           go scope bodyForest (mkCmd0 (k ()))
@@ -176,7 +176,7 @@ mkLeakForest = fastNub . go emptyScope []
         For loopVar (init :: Expr s c) loopTriple :>>= k ->
           let loopSn = mkSomeName loopVar
               (cond, update, body) = loopTriple ()
-              secretDeps = filter isSecretName $ collectSomeNames cond
+              secretDeps = fastNub $ filter isSecretName $ collectSomeNames cond
 
               updateForest = go (scopePush scope secretDeps) forest update
               bodyForest = go (scopePush scope secretDeps) forest body
