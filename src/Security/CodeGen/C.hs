@@ -254,3 +254,6 @@ example9 = do
     (publicArray ! i) .= leak
     ))
 
+example10 :: Cmd ()
+example10 = example8 >> example9
+
