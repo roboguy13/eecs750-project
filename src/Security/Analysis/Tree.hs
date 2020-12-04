@@ -47,5 +47,8 @@ addChildrenTo :: (Ord a, Eq a) => Forest a -> a -> [Tree a] -> Forest a
 addChildrenTo forest parent children = foldr (\child acc -> addChildTo acc parent child) forest children
 
 unionForests :: (Ord a, Eq a) => Forest a -> Forest a -> Forest a
-unionForests = union --foldr (flip insertTree)
+unionForests = fastUnion --foldr (flip insertTree)
+
+fastUnion :: Ord a => [a] -> [a] -> [a]
+fastUnion xs ys = Set.toList (Set.union (Set.fromList xs) (Set.fromList ys))
 
