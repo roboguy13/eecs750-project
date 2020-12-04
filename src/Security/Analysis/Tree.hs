@@ -8,6 +8,7 @@ import           Security.Util
 import           Control.Monad.Writer
 
 import           Data.List
+import qualified Data.Set as Set
 
 data Tree a   = Node a (Forest a)
   deriving (Functor, Eq, Ord, Show)
@@ -27,43 +28,44 @@ addChild :: Eq a => a -> Tree a -> Tree a -> Tree a
 addChild parent child t =
   fst $ runWriter (addChild' parent child t)
 
-newTreeEither :: Eq a => Tree a -> Forest a -> Either (Maybe (Forest a)) (Forest a)
+newTreeEither :: (Ord a, Eq a) => Tree a -> Forest a -> Either (Maybe (Forest a)) (Forest a)
 newTreeEither t [] = Right [t]
 newTreeEither t@(Node x xs) (origNode@(Node x' xs'):rest)
   | x == x' =
-      if xs == xs'
-        then Left $ Just (Node x (xs `unionForests` xs') : rest)
+      if xs /= xs'
+        then Left $ Just (union [Node x (xs `unionForests` xs')] rest)
         else Left Nothing
   | otherwise = do
       case newTreeEither t xs' of
         Right _ -> do
           rest' <- newTreeEither t rest
-          return (origNode : rest')
+          return (union [origNode] rest')
+        Left Nothing -> Left Nothing
         Left (Just forest') ->
           Left $ Just (forest' ++ rest)
           -- Left (Node x' forest':rest)
 
-newTree :: Eq a => Tree a -> Forest a -> Forest a
+newTree :: (Ord a, Eq a) => Tree a -> Forest a -> Forest a
 newTree x t =
   case newTreeEither x t of
     Right t' -> t'
     Left Nothing -> t
     Left (Just t') -> t'
 
-forestAddChild' :: Eq a => a -> Tree a -> Forest a -> Writer Progress (Forest a)
+forestAddChild' :: (Ord a, Eq a) => a -> Tree a -> Forest a -> Writer Progress (Forest a)
 forestAddChild' parent child = mapM (addChild' parent child)
 
-forestAddChild :: Eq a => a -> Tree a -> Forest a -> Forest a
+forestAddChild :: (Ord a, Eq a) => a -> Tree a -> Forest a -> Forest a
 forestAddChild parent child = map (addChild parent child)
 
-forestAddChildren :: Eq a => a -> [Tree a] -> Forest a -> Forest a
+forestAddChildren :: (Ord a, Eq a) => a -> [Tree a] -> Forest a -> Forest a
 forestAddChildren parent children forest =
   fst $ runWriter $ forestAddChildren' parent children forest
 
-forestAddChildren' :: Eq a => a -> [Tree a] -> Forest a -> Writer Progress (Forest a)
-forestAddChildren' parent children forest = foldM (\acc x -> forestAddChild' parent x acc) forest children
+forestAddChildren' :: (Ord a, Eq a) => a -> [Tree a] -> Forest a -> Writer Progress (Forest a)
+forestAddChildren' parent children forest = foldM (\acc x -> fastNub <$> forestAddChild' parent x acc) forest children
 
-unionForests :: Eq a => Forest a -> Forest a -> Forest a
+unionForests :: (Ord a, Eq a) => Forest a -> Forest a -> Forest a
 unionForests [] forest = forest
 unionForests forest [] = forest
 unionForests (Node x xs:rest) forest =
@@ -71,7 +73,7 @@ unionForests (Node x xs:rest) forest =
   in
     if madeProgress w
       then unionForests rest forest'
-      else newTree (Node x xs) (unionForests rest forest)
+      else fastNub $ newTree (Node x xs) (unionForests rest forest)
       -- else [Node x xs] `union` unionForests rest forest
       -- else Node x xs : unionForests rest forest
 
@@ -97,4 +99,7 @@ instance Semigroup Progress where
 
 instance Monoid Progress where
   mempty = NoProgress
+
+fastNub :: Ord a => [a] -> [a]
+fastNub = Set.toList . Set.fromList
 

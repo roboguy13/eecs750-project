@@ -20,9 +20,6 @@ import           Control.Arrow
 import           Data.List
 import qualified Data.Set as Set
 
-fastNub :: Ord a => [a] -> [a]
-fastNub = Set.toList . Set.fromList
-
 -- | Get the names in an Expr
 collectSomeNames :: Expr s a -> [SomeName]
 collectSomeNames (Var n) = [mkSomeName n]
