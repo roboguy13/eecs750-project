@@ -16,6 +16,7 @@ import           Security.Analysis.DOT
 
 import           Control.Monad.Operational
 import           Control.Applicative
+import           Control.Arrow
 import           Data.List
 
 -- | Get the names in an Expr
@@ -53,31 +54,63 @@ consIf p x xs
   | p x = x : xs
   | otherwise = xs
 
--- | The 'Sensitivity' here depends on whether the scope depends on
--- a secret variable in a condition. It starts out as 'Public' and gets
--- updated as necessary.
-type Scope = [(Sensitivity, [SomeName])]
+onHead :: (a -> a) -> [a] -> [a]
+onHead f [] = []
+onHead f (x:xs) = f x : xs
+
+-- -- | The 'Sensitivity' here depends on whether the scope depends on
+-- -- a secret variable in a condition. It starts out as 'Public' and gets
+-- -- updated as necessary.
+
+type Scope =
+  [([SomeName]  -- | Secret variables from enclosing conditional
+  , [SomeName]) -- | Public variables on the from the enclosing scope
+  ]
 
 emptyScope :: Scope
-emptyScope = [(Public, [])]
+emptyScope = []
 
 scopeAddName :: Scope -> SomeName -> Scope
-scopeAddName [] newName = [(Public, [newName])]
-scopeAddName (ns:nss) newName = (fmap (newName:)ns) : nss
+scopeAddName scope newName =
+  onHead (\(secretDeps, sns) -> (secretDeps, newName : sns)) scope
 
-scopePush :: Sensitivity -> Scope -> Scope
-scopePush sens [] = emptyScope -- = ((Public, []:))
-scopePush sens ((_oldSens, ns):nss) = (Public, []) : (sens, ns) : nss
+scopeSetSecretDeps :: Scope -> [SomeName] -> Scope
+scopeSetSecretDeps [] secretDeps = []
+scopeSetSecretDeps ((_, sns):scope) secretDeps = (secretDeps, sns) : scope
+
+scopePush :: Scope -> [SomeName] -> Scope
+scopePush scope secretDeps = ([], []) : scopeSetSecretDeps scope secretDeps
 
 scopePop :: Scope -> Scope
 scopePop = drop 1
 
-isInLocalScope :: Scope -> SomeName -> Bool
-isInLocalScope [] name = False
-isInLocalScope ((_, ns):_) name = name `elem` ns
+-- secretInLocalScope :: Scope -> SomeName -> Bool
+-- secretInLocalScope [] sn = False
+-- secretInLocalScope (locals:_) sn = sn `elem` (map snd locals) && isSecretName sn
 
-isInSecretScope :: Scope -> SomeName -> Bool
-isInSecretScope scope name = any (name `elem`) . map snd $ filter ((== Secret) . fst) scope
+-- publicNonLocal = undefined
+
+publicNonLocal :: Scope -> SomeName -> Maybe [SomeName]
+publicNonLocal scope sn =
+  let enclosingScope = scopePop scope
+  in
+    fmap fst $ find ((sn `elem`) . snd) enclosingScope
+
+
+-- isInLocalScope :: Scope -> SomeName -> Bool
+-- isInLocalScope [] name = False
+-- isInLocalScope ((_, ns):_) name = name `elem` ns
+
+-- isInSecretScope :: Scope -> SomeName -> Bool
+-- isInSecretScope scope name = any (name `elem`) . map snd $ filter ((== Secret) . fst) scope
+
+-- publicOutOfLocalScope :: Scope -> SomeName -> Bool
+-- publicOutOfLocalScope scope0 name =
+--   let scope = scopePop scope0
+--   in
+
+strength :: Functor f => (f a, b) -> f (a, b)
+strength (fa, b) = fmap (\a -> (a, b)) fa
 
 mkLeakForest :: NamedCmd a -> Forest SomeName
 -- mkLeakForest = {- pruneWhenLeavesAre isSecretName . -} go [] [] []
@@ -105,62 +138,47 @@ mkLeakForest = go emptyScope []
 
         Assign lhs rhs :>>= k ->
           let lhsSns = collectSomeNames lhs
-          in undefined
-{-
-    go :: [SomeName] -> [SomeName] -> Forest SomeName -> NamedCmd ty -> Forest SomeName
-    go secretDeps {- dependencies from an enclosing control structure -} localNames forest c =
-      let isNonLocal sn = sn `notElem` localNames
-          isSecretOrNonLocal = liftA2 (||) isSecretName isNonLocal
-      in
-      case viewCmd0 c of
-        Return _ -> forest
-
-        AllocSecret name size :>>= k ->
-          let sn = mkSomeName name
-          in
-          go secretDeps (sn : localNames) (insertTreeIfSecret forest sn) (mkCmd0 (k (Var name)))
-
-        AllocPublic name size :>>= k ->
-          let sn = mkSomeName name
-          in
-          go secretDeps (sn : localNames) forest (mkCmd0 (k (Var name)))
-
-        Decl name x :>>= k ->
-          let sn = mkSomeName name
-          in
-          go secretDeps (sn : localNames) (insertTreeIfSecret forest sn) (mkCmd0 (k (Var name)))
-
-        Assign lhs rhs :>>= k ->
-          let lhsSns = collectSomeNames lhs
+              rhsSns = collectSomeNames rhs
+              -- forest' =
+              --   foldr (\rhsSn -> forestAddChildren rhsSn (map Tree.singleton rhsSns))
+              --         forest
+              --         (filter isSecretName lhsSns)
               forest' =
-                foldr (\x acc -> forestAddChildren x (map Tree.singleton lhsSns) acc) forest (collectSomeNames rhs)
-                  ++
-                foldr (\x acc -> forestAddChildren x (map Tree.singleton (filter isNonLocal lhsSns)) acc) forest secretDeps
+                foldr (\rhsSn -> forestAddChildren rhsSn (map Tree.singleton lhsSns))
+                      forest
+                      (filter isSecretName rhsSns)
           in
-          go secretDeps localNames forest' (mkCmd0 (k ()))
+          case strength (mapM (publicNonLocal scope &&& id) lhsSns) of
+            Just (secretDeps, lhsSn) ->
+              let forest'' =
+                    foldr (\p -> forestAddChildren p (map Tree.singleton lhsSns))
+                          forest'
+                          secretDeps
+              in
+              go scope forest'' (mkCmd0 (k ()))
+            Nothing ->
+              go scope forest' (mkCmd0 (k ()))
 
         IfThenElse cond t f :>>= k ->
-          let condSecretNames = filter isSecretName (collectSomeNames cond)
-              secretDeps' = condSecretNames ++ secretDeps
-              tForest = go secretDeps [] forest t
-              fForest = go secretDeps [] forest f
-              forest' = unionForests tForest fForest
+          let secretDeps = filter isSecretName $ collectSomeNames cond
+              tForest = go (scopePush scope secretDeps) forest t
+              fForest = go (scopePush scope secretDeps) forest f
           in
-          go secretDeps' localNames forest' (mkCmd0 (k ()))
+          go scope (tForest `unionForests` fForest) (mkCmd0 (k ()))
 
         While cond body :>>= k ->
-          let condSecretNames = filter isSecretName (collectSomeNames cond)
-              bodyForest = go condSecretNames [] forest body
-              secretDeps' = condSecretNames ++ secretDeps
+          let secretDeps = filter isSecretName $ collectSomeNames cond
+              bodyForest = go (scopePush scope secretDeps) forest body
           in
-          go secretDeps' localNames bodyForest (mkCmd0 (k ()))
+          go scope bodyForest (mkCmd0 (k ()))
 
         For loopVar (init :: Expr s c) loopTriple :>>= k ->
           let loopSn = mkSomeName loopVar
               (cond, update, body) = loopTriple ()
-              condSecretNames = filter isSecretName (collectSomeNames cond)
-              secretDeps' = condSecretNames ++ secretDeps
-              forest' = go secretDeps' [loopSn] forest update `unionForests` go secretDeps' [loopSn] forest body
+              secretDeps = filter isSecretName $ collectSomeNames cond
+
+              updateForest = go (scopePush scope secretDeps) forest update
+              bodyForest = go (scopePush scope secretDeps) forest body
           in
-          go (consIf isSecretName loopSn secretDeps) localNames forest' (mkCmd0 (k ()))
--}
+          go scope (updateForest `unionForests` bodyForest) (mkCmd0 (k ()))
+
