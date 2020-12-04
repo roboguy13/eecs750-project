@@ -18,6 +18,10 @@ import           Control.Monad.Operational
 import           Control.Applicative
 import           Control.Arrow
 import           Data.List
+import qualified Data.Set as Set
+
+fastNub :: Ord a => [a] -> [a]
+fastNub = Set.toList . Set.fromList
 
 -- | Get the names in an Expr
 collectSomeNames :: Expr s a -> [SomeName]
@@ -114,7 +118,7 @@ strength (fa, b) = fmap (\a -> (a, b)) fa
 
 mkLeakForest :: NamedCmd a -> Forest SomeName
 -- mkLeakForest = {- pruneWhenLeavesAre isSecretName . -} go [] [] []
-mkLeakForest = go emptyScope []
+mkLeakForest = fastNub . go emptyScope []
   where
     go :: Scope -> Forest SomeName -> NamedCmd ty -> Forest SomeName
     go scope forest c =

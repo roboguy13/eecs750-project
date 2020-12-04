@@ -27,24 +27,28 @@ addChild :: Eq a => a -> Tree a -> Tree a -> Tree a
 addChild parent child t =
   fst $ runWriter (addChild' parent child t)
 
-newTreeEither :: Eq a => Tree a -> Forest a -> Either (Forest a) (Forest a)
+newTreeEither :: Eq a => Tree a -> Forest a -> Either (Maybe (Forest a)) (Forest a)
 newTreeEither t [] = Right [t]
 newTreeEither t@(Node x xs) (origNode@(Node x' xs'):rest)
-  | x == x' = Left (Node x (xs `unionForests` xs') : rest)
+  | x == x' =
+      if xs == xs'
+        then Left $ Just (Node x (xs `unionForests` xs') : rest)
+        else Left Nothing
   | otherwise = do
       case newTreeEither t xs' of
         Right _ -> do
           rest' <- newTreeEither t rest
           return (origNode : rest')
-        Left forest' ->
-          Left (forest' ++ rest)
+        Left (Just forest') ->
+          Left $ Just (forest' ++ rest)
           -- Left (Node x' forest':rest)
 
 newTree :: Eq a => Tree a -> Forest a -> Forest a
 newTree x t =
   case newTreeEither x t of
     Right t' -> t'
-    Left t' -> t'
+    Left Nothing -> t
+    Left (Just t') -> t'
 
 forestAddChild' :: Eq a => a -> Tree a -> Forest a -> Writer Progress (Forest a)
 forestAddChild' parent child = mapM (addChild' parent child)
