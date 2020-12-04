@@ -47,7 +47,7 @@ isSecretName sn =
 
 insertTreeIfSecret :: Forest SomeName -> SomeName -> Forest SomeName
 insertTreeIfSecret forest sn
-  | isSecretName sn = newTree (Tree.singleton sn) forest
+  | isSecretName sn = insertTree forest (Tree.singleton sn)
   | otherwise       = forest
 
 consIf :: (a -> Bool) -> a -> [a] -> [a]
@@ -140,19 +140,15 @@ mkLeakForest = fastNub . go emptyScope []
         Assign lhs rhs :>>= k ->
           let lhsSns = fastNub $ collectSomeNames lhs
               rhsSns = fastNub $ collectSomeNames rhs
-              -- forest' =
-              --   foldr (\rhsSn -> forestAddChildren rhsSn (map Tree.singleton rhsSns))
-              --         forest
-              --         (filter isSecretName lhsSns)
               forest' =
-                foldr (\rhsSn -> forestAddChildren rhsSn (map Tree.singleton lhsSns))
+                foldr (\rhsSn acc -> addChildrenTo acc rhsSn (map Tree.singleton lhsSns))
                       forest
                       (filter isSecretName rhsSns)
           in
           case strength (mapM (publicNonLocal scope &&& id) lhsSns) of
             Just (secretDeps, lhsSn) ->
               let forest'' =
-                    foldr (\p -> forestAddChildren p (map Tree.singleton lhsSns))
+                    foldr (\p acc -> addChildrenTo acc p (map Tree.singleton lhsSns))
                           forest'
                           (fastNub secretDeps)
               in
