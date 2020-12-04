@@ -59,10 +59,6 @@ onHead :: (a -> a) -> [a] -> [a]
 onHead f [] = []
 onHead f (x:xs) = f x : xs
 
--- -- | The 'Sensitivity' here depends on whether the scope depends on
--- -- a secret variable in a condition. It starts out as 'Public' and gets
--- -- updated as necessary.
-
 type Scope =
   [([SomeName]  -- | Secret variables from enclosing conditional
   , [SomeName]) -- | Public variables on the from the enclosing scope
@@ -85,36 +81,16 @@ scopePush scope secretDeps = ([], []) : scopeSetSecretDeps scope secretDeps
 scopePop :: Scope -> Scope
 scopePop = drop 1
 
--- secretInLocalScope :: Scope -> SomeName -> Bool
--- secretInLocalScope [] sn = False
--- secretInLocalScope (locals:_) sn = sn `elem` (map snd locals) && isSecretName sn
-
--- publicNonLocal = undefined
-
 publicNonLocal :: Scope -> SomeName -> Maybe [SomeName]
 publicNonLocal scope sn =
   let enclosingScope = scopePop scope
   in
     fmap fst $ find ((sn `elem`) . snd) enclosingScope
 
-
--- isInLocalScope :: Scope -> SomeName -> Bool
--- isInLocalScope [] name = False
--- isInLocalScope ((_, ns):_) name = name `elem` ns
-
--- isInSecretScope :: Scope -> SomeName -> Bool
--- isInSecretScope scope name = any (name `elem`) . map snd $ filter ((== Secret) . fst) scope
-
--- publicOutOfLocalScope :: Scope -> SomeName -> Bool
--- publicOutOfLocalScope scope0 name =
---   let scope = scopePop scope0
---   in
-
 strength :: Functor f => (f a, b) -> f (a, b)
 strength (fa, b) = fmap (\a -> (a, b)) fa
 
 mkLeakForest :: NamedCmd a -> Forest SomeName
--- mkLeakForest = {- pruneWhenLeavesAre isSecretName . -} go [] [] []
 mkLeakForest = go emptyScope []
   where
     go :: Scope -> Forest SomeName -> NamedCmd ty -> Forest SomeName
