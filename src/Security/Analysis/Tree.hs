@@ -50,5 +50,5 @@ unionForests :: (Ord a, Eq a) => Forest a -> Forest a -> Forest a
 unionForests = fastUnion --foldr (flip insertTree)
 
 fastUnion :: Ord a => [a] -> [a] -> [a]
-fastUnion xs ys = Set.toList (Set.union (Set.fromList xs) (Set.fromList ys))
+fastUnion xs ys = Set.toList (Set.fromList (xs ++ ys))
 
