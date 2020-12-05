@@ -5,6 +5,7 @@
 {-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE KindSignatures #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Security.Repr where
 
@@ -21,10 +22,15 @@ data CType a where
   CBool :: CType Bool
   CPtr :: forall a. CType a -> CType (Ptr a)
 
+deriving instance Show (CType a)
+
 class Repr a where
   typeRepr :: CType a -> String
   ctype :: CType a
   lit :: a -> String
+
+ctypeProxy :: Repr a => proxy a -> CType a
+ctypeProxy _ = ctype
 
 ptrTypeRepr :: Repr a => CType (Ptr a) -> String
 ptrTypeRepr (CPtr ty) = typeRepr ty

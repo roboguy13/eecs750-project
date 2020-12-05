@@ -21,6 +21,8 @@ import           Control.Monad
 import           Control.Monad.Operational
 import           Data.List
 
+import           Debug.Trace
+
 genC :: forall a. Repr a => Cmd a -> CodeGen String
 genC = genCNamed <=< genNames
 
@@ -33,17 +35,19 @@ genC0 withSemi c =
     Return x -> return "" -- Commands cannot have values in this subset of C
 
     AllocSecret name size :>>= (k :: Expr s b -> _) -> do
-      let d = genDecl ctype name
-          alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
+      let d = ptrTypeRepr (ctype @b) <> " " <> emitName name <> "[" <> show size <> "]"
+      -- let d = genDecl ctype name
+      --     alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
       r <- genCNamed (mkCmd0 (k (Var name)))
 
-      return $ unlines'With r [stmt' withSemi [d, "=", alloc]]
+      return $ unlines'With r [stmt' withSemi [d]]
 
     AllocPublic name size :>>= (k :: Expr s b -> _) -> do
-      let d = genDecl ctype name
-          alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
+      let d = ptrTypeRepr (ctype @b) <> " " <> emitName name <> "[" <> show size <> "]"
+      -- let d = genDecl ctype name
+      --     alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
       r <- genCNamed (mkCmd0 (k (Var name)))
-      return $ unlines'With r [stmt' withSemi [d, "=", alloc]]
+      return $ unlines'With r [stmt' withSemi [d]]
 
     Decl name x :>>= k -> do
       let d = genDecl ctype name
@@ -55,14 +59,22 @@ genC0 withSemi c =
     Assign (Var n) e :>>= k -> do
       eCode <- genExprC e
       r <- genCNamed (mkCmd0 (k ()))
-      return $ unlines'With r [stmt' withSemi [emitName n, "=", eCode]]
+
+      case ctypeProxy n of
+        CPtr _ -> return $ unlines'With r [stmt' withSemi ["memcpy(" <> emitName n <> ", " <> eCode <> ", sizeof(" <> emitName n <> "))"]]
+        _ -> return $ unlines'With r [stmt' withSemi [emitName n, "=", eCode]]
 
     -- Assign x@(Index _ _) y :>>= k -> do
     Assign x y :>>= k -> do
       xCode <- genExprC x
       yCode <- genExprC y
       r <- genCNamed (mkCmd0 (k ()))
-      return $ unlines'With r [stmt' withSemi [xCode, "=", yCode]]
+
+      traceShowM ("Type: " ++ show (ctypeProxy x))
+
+      case ctypeProxy x of
+        CPtr _ -> return $ unlines'With r [stmt' withSemi ["memcpy(" <> xCode <> ", " <> yCode <> ", sizeof(" <> xCode <> "))"]]
+        _ -> return $ unlines'With r [stmt' withSemi [xCode, "=", yCode]]
 
     IfThenElse cond t f :>>= k -> do
       condCode <- genExprC cond
