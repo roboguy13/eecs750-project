@@ -64,12 +64,12 @@ newUniq = do
 newNameWith :: forall s a. SingI s => String -> CodeGen (Name s a)
 newNameWith readableStr = do
   uniq <- newUniq
-  return (Name sing ("_sec_" <> readableStr <> "_" <> show uniq))
+  return (Name sing ("_s_" <> readableStr <> "_" <> show uniq))
 
 freshName :: forall s a. SingI s => CodeGen (Name s a)
 freshName = do
   uniq <- newUniq
-  return (Name sing ("_fresh_sec_" <> show uniq))
+  return (Name sing ("_fs_" <> show uniq))
 
 emitName :: forall s a. Name s a -> String
 emitName (Name _ n) = n
