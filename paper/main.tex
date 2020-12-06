@@ -50,7 +50,7 @@
 %\bgroup \color{red}{} \egroup}
 \bgroup \color{red}{[FIXME: {#1}]} \egroup}
 
-\lstset{breaklines=true, basicstyle=\ttfamily\tiny, escapeinside={(*@}{@*)}}
+\lstset{breaklines=true, basicstyle=\ttfamily\fontsize{6}{7}\selectfont, escapeinside={(*@}{@*)}}
 
 %\usepackage[pdftex]{hyperref}
 \usepackage{rotating,tabularx}
@@ -81,6 +81,7 @@
 \newcommand{\midrule}{\hline}
 
 \setlength\extrarowheight{1.5pt}
+\setlength{\tabcolsep}{1pt}
 
 \newcommand{\ttt}{\texttt}
 \newcommand{\rarr}{\rightarrow}
@@ -98,11 +99,14 @@ University of Kansas, USA\\
 \thispagestyle{empty}
 \begin{abstract}
 
-  A Spectre mitigation strategy in the form of a mechanism for marking variables as "non-speculative" was developed in
-  \cite{SpectreGuard}. In this paper, we develop an embedded domain specific language (EDSL) in Haskell to provide
-  support for this feature. The static type system of Haskell is used so that many basic forms of copying
-  secret variables to public variables are disallowed. Additionally, a static analysis was developed which
-  will detect some cases of secret variables leaking to public variables via control flow constructs.
+  A Spectre mitigation strategy in the form of a mechanism for marking variables
+  as "non-speculative" was developed in \cite{SpectreGuard}. In this paper, we
+  develop an embedded domain specific language (EDSL) in Haskell to provide
+  support for this feature, with a backend that generates C code. The static
+  type system of Haskell is used so that many basic forms of copying secret
+  variables to public variables are disallowed. Additionally, a static analysis
+  was developed which will detect some cases of secret variables leaking to
+  public variables via control flow constructs.
 
 \end{abstract}
 
@@ -121,6 +125,8 @@ A correspondence between the syntax of the EDSL, which is inherited from
 Haskell, and the C language is given in Fig. \ref{fig:Syntax}. In the right column, an
 overline indicates that the transformation from EDSL to C is recursively
 performed to the expression or command underneath the overline.
+
+This also outlines procedure that the C code generator uses.
 
 \begin{figure}[h]
 \begin{tabular}{|l|l|}
@@ -200,7 +206,9 @@ performed to the expression or command underneath the overline.
 
   \hline
   \begin{lstlisting}
-  for init (\i -> (cond, update, body))
+  for init
+    (\i ->
+      (cond, update, body))
   \end{lstlisting}
   & \begin{lstlisting}
   for (int i = (*@$\overline{\ttt{init}}$@*); (*@$\overline{\ttt{cond}}$@*); (*@$\overline{\ttt{update}}$@*))
@@ -217,7 +225,8 @@ performed to the expression or command underneath the overline.
 \section{Sensitivity Types}
 The Haskell type system is leveraged to perform a basic static consistency check of the sensitivities
 of variables, so that a variable does not get assigned to a variable of a different sensitivity. The
-logical inference rules corresponding to this check are given in Fig. \ref{fig:SensTypes}.
+logical inference rules corresponding to this check are given in Fig. \ref{fig:SensTypes}. An introduction
+to this style of inference rule system, with many examples and applications in the study of programming languages, is given in \cite{HarperFoundations}.
 
 In Fig. \ref{fig:SensTypes}, it is assumed that $\tau$ and $\sigma$ are given by the
 following grammar:
@@ -233,9 +242,9 @@ A typing judgement is expressed with the syntax
   \ttt{x :: $\beta$}
 \end{equation*}
 
-where \ttt{x} is some expression or command in the EDSL. This judgment means
-that \ttt{x} has type $\beta$. This is the same syntax used by Haskell, and by extension
-the EDSL, to explicitly specify a type in an expression.
+where \ttt{x} is some expression or command in the EDSL. This judgement means
+that \ttt{x} has type $\beta$. This is also the same syntax used by Haskell, and by extension
+the EDSL, to explicitly specify the type of any expression when necessary or desired.
 
 
 \begin{figure}[h]
@@ -387,9 +396,9 @@ accurate and succinct picture to programmers of where leaks are occurring, or
 potentially occurring.
 
 Additionally, features to safely convert between sensitivity levels could prove
-useful. A conversion from public to secret would be straightforward. A conversion
+useful. A conversion from public to secret would be straightforward. A situational conversion
 going the other direction could be provided by an instruction in the EDSL
-which might perform a mitigation measure, such as a cache flush. \cite{PLtea-james}
+which might perform a Spectre mitigation measure, such as a cache flush. \cite{PLtea-james}
 
 \section{Conclusion}
 ...
