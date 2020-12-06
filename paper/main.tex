@@ -304,7 +304,15 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
   \inference{%
     \Gamma \vdash \ttt{init :: Expr $\sigma$ $\tau$}\\
     \Gamma \vdash \ttt{fn :: Expr $\sigma$ $\tau$ $\rarr$ (Expr $\sigma$ Bool, Cmd (), Cmd ())}
-    }{\Gamma \vdash \ttt{for init fn :: Cmd ()}}
+    }{\Gamma \vdash \ttt{for init fn :: Cmd ()}}\\
+  \\
+  \inference{%
+    \Gamma \vdash \ttt{c :: Cmd (Expr $\sigma$ $\tau$)}
+    & \ttt{x} \notin dom(\Gamma)
+    \\ \Gamma \vdash \ttt{($\lambda$ x $\rarr$ body) :: Expr $\sigma$ $\tau$ $\rarr$ Cmd $\alpha$}
+  }{%
+    \Gamma \vdash \ttt{(\textbf{do} \{ x <- c; body \}) :: Cmd $\alpha$}
+  }
 \end{gather*}
 \end{minipage}}
   \caption{Typing rules for sensitivity types}
