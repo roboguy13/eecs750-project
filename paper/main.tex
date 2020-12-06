@@ -215,6 +215,10 @@ performed to the expression or command underneath the overline.
 \end{figure}
 
 \section{Sensitivity Types}
+The Haskell type system is leveraged to perform a basic static consistency check of the sensitivities
+of variables, so that a variable does not get assigned to a variable of a different sensitivity. The
+logical inference rules corresponding to this check are given in Fig. \ref{fig:SensTypes}.
+
 In Fig. \ref{fig:SensTypes}, it is assumed that $\tau$ and $\sigma$ are given by the
 following grammar:
 \begin{gather*}
@@ -377,6 +381,15 @@ the EDSL, to explicitly specify a type in an expression.
 % ...
 
 \section{Future Work}
+A further investigation into the tradeoffs and possible additional features of
+the information flow analysis is likely to be useful. This could provide a more
+accurate and succinct picture to programmers of where leaks are occurring, or
+potentially occurring.
+
+Additionally, features to safely convert between sensitivity levels could prove
+useful. A conversion from public to secret would be straightforward. A conversion
+going the other direction could be provided by an instruction in the EDSL
+which might perform a mitigation measure, such as a cache flush. \cite{PLtea-james}
 
 \section{Conclusion}
 ...
