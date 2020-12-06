@@ -28,3 +28,86 @@ edition = {2nd},
 abstract = {This text develops a comprehensive theory of programming languages based on type systems and structural operational semantics. Language concepts are precisely defined by their static and dynamic semantics, presenting the essential tools both intuitively and rigorously while relying on only elementary mathematics. These tools are used to analyze and prove properties of languages and provide the framework for combining and comparing language features. The broad range of concepts includes fundamental data types such as sums and products, polymorphic and abstract types, dynamic typing, dynamic dispatch, subtyping and refinement types, symbols and dynamic classification, parallelism and cost semantics, and concurrency and distribution. The methods are directly applicable to language implementation, to the development of logics for reasoning about programs, and to the formal verification language properties such as type safety. This thoroughly revised second edition includes exercises at the end of nearly every chapter and a new chapter on type refinements.}
 }
 
+
+@inproceedings{SingletonsPaper,
+author = {Eisenberg, Richard A. and Weirich, Stephanie},
+title = {Dependently Typed Programming with Singletons},
+year = {2012},
+isbn = {9781450315746},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2364506.2364522},
+doi = {10.1145/2364506.2364522},
+abstract = {Haskell programmers have been experimenting with dependent types for at least a decade, using clever encodings that push the limits of the Haskell type system. However, the cleverness of these encodings is also their main drawback. Although the ideas are inspired by dependently typed programs, the code looks significantly different. As a result, GHC implementors have responded with extensions to Haskell's type system, such as GADTs, type families, and datatype promotion. However, there remains a significant difference between programming in Haskell and in full-spectrum dependently typed languages. Haskell enforces a phase separation between runtime values and compile-time types. Therefore, singleton types are necessary to express the dependency between values and types. These singleton types introduce overhead and redundancy for the programmer.This paper presents the singletons library, which generates the boilerplate code necessary for dependently typed programming using GHC. To compare with full-spectrum languages, we present an extended example based on an Agda interface for safe database access. The paper concludes with a detailed discussion on the current capabilities of GHC for dependently typed programming and suggestions for future extensions to better support this style of programming.},
+booktitle = {Proceedings of the 2012 Haskell Symposium},
+pages = {117–130},
+numpages = {14},
+keywords = {singletons, dependently typed programming, haskell, gadts},
+location = {Copenhagen, Denmark},
+series = {Haskell '12}
+}
+
+@article{10.1145/2430532.2364522,
+author = {Eisenberg, Richard A. and Weirich, Stephanie},
+title = {Dependently Typed Programming with Singletons},
+year = {2012},
+issue_date = {December 2012},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {47},
+number = {12},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/2430532.2364522},
+doi = {10.1145/2430532.2364522},
+abstract = {Haskell programmers have been experimenting with dependent types for at least a decade, using clever encodings that push the limits of the Haskell type system. However, the cleverness of these encodings is also their main drawback. Although the ideas are inspired by dependently typed programs, the code looks significantly different. As a result, GHC implementors have responded with extensions to Haskell's type system, such as GADTs, type families, and datatype promotion. However, there remains a significant difference between programming in Haskell and in full-spectrum dependently typed languages. Haskell enforces a phase separation between runtime values and compile-time types. Therefore, singleton types are necessary to express the dependency between values and types. These singleton types introduce overhead and redundancy for the programmer.This paper presents the singletons library, which generates the boilerplate code necessary for dependently typed programming using GHC. To compare with full-spectrum languages, we present an extended example based on an Agda interface for safe database access. The paper concludes with a detailed discussion on the current capabilities of GHC for dependently typed programming and suggestions for future extensions to better support this style of programming.},
+journal = {SIGPLAN Not.},
+month = sep,
+pages = {117–130},
+numpages = {14},
+keywords = {gadts, haskell, singletons, dependently typed programming}
+}
+
+@book{Phantom,
+  year = {2003},
+  edition = {},
+  number = {},
+  journal = {},
+  pages = {245-262},
+  publisher = {},
+  school = {},
+  title = {Fun with phantom types},
+  volume = {},
+  author = {Hinze, Ralf},
+  editor = {Gibbons, Jeremy and de Moor, Oege},
+  series = {}
+}
+
+@book{CertProg,
+author = {Chlipala, Adam},
+title = {Certified Programming with Dependent Types: A Pragmatic Introduction to the Coq Proof Assistant},
+year = {2013},
+isbn = {0262026651},
+publisher = {The MIT Press},
+abstract = {The technology of mechanized program verification can play a supporting role in many kinds of research projects in computer science, and related tools for formal proof-checking are seeing increasing adoption in mathematics and engineering. This book provides an introduction to the Coq software for writing and checking mathematical proofs. It takes a practical engineering focus throughout, emphasizing techniques that will help users to build, understand, and maintain large Coq developments and minimize the cost of code change over time. Two topics, rarely discussed elsewhere, are covered in detail: effective dependently typed programming (making productive use of a feature at the heart of the Coq system) and construction of domain-specific proof tactics. Almost every subject covered is also relevant to interactive computer theorem proving in general, not just program verification, demonstrated through examples of verified programs applied in many different sorts of formalizations. The book develops a unique automated proof style and applies it throughout; even experienced Coq users may benefit from reading about basic Coq concepts from this novel perspective. The book also offers a library of tactics, or programs that find proofs, designed for use with examples in the book. Readers will acquire the necessary skills to reimplement these tactics in other settings by the end of the book. All of the code appearing in the book is freely available online.}
+
+}
+
+@article{DepHaskSpec,
+author = {Weirich, Stephanie and Voizard, Antoine and de Amorim, Pedro Henrique Azevedo and Eisenberg, Richard A.},
+title = {A Specification for Dependent Types in Haskell},
+year = {2017},
+issue_date = {September 2017},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {1},
+number = {ICFP},
+url = {https://doi.org/10.1145/3110275},
+doi = {10.1145/3110275},
+abstract = { We propose a core semantics for Dependent Haskell, an extension of Haskell with full-spectrum dependent types. Our semantics consists of two related languages. The first is a Curry-style dependently-typed language with nontermination, irrelevant arguments, and equality abstraction. The second, inspired by the Glasgow Haskell Compiler's core language FC, is its explicitly-typed analogue, suitable for implementation in GHC. All of our results---chiefly, type safety, along with theorems that relate these two languages---have been formalized using the Coq proof assistant. Because our work is backwards compatible with Haskell, our type safety proof holds in the presence of nonterminating computation. However, unlike other full-spectrum dependently-typed languages, such as Coq, Agda or Idris, because of this nontermination, Haskell's term language does not correspond to a consistent logic. },
+journal = {Proc. ACM Program. Lang.},
+month = aug,
+articleno = {31},
+numpages = {29},
+keywords = {Haskell, Dependent Types}
+}
+

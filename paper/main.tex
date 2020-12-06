@@ -43,7 +43,8 @@
 \usepackage{epsfig}
 %\usepackage{epstopdf}
 %\usepackage[font=small,labelfont=bf]{caption}
-\usepackage{url}
+% \usepackage{url}
+\usepackage[hyphens]{url}
 
 \usepackage{color}
 \def\fixme#1{\typeout{FIXED in page \thepage : {#1}}
@@ -201,7 +202,7 @@ This also outlines procedure that the C code generator uses.
   if cond t f
   \end{lstlisting}
   & \begin{lstlisting}
-  if ((*@$\overline{\ttt{cond}}$@*)) { (*@$\overline{\ttt{t}}$@*) } else { (*@$\overline{\ttt{t}}$@*) }
+  if ((*@$\overline{\ttt{cond}}$@*)) { (*@$\overline{\ttt{t}}$@*) } else { (*@$\overline{\ttt{f}}$@*) }
   \end{lstlisting}\\
 
   \hline
@@ -224,9 +225,13 @@ This also outlines procedure that the C code generator uses.
 
 \section{Sensitivity Types}
 The Haskell type system is leveraged to perform a basic static consistency check of the sensitivities
-of variables, so that a variable does not get assigned to a variable of a different sensitivity. The
+of variables, so that a variable does not get assigned to a variable of a different sensitivity. This
+is done by making the \verb|Expr| type constructor take a phantom type argument~\cite{Phantom}. The
 logical inference rules corresponding to this check are given in Fig. \ref{fig:SensTypes}. An introduction
 to this style of inference rule system, with many examples and applications in the study of programming languages, is given in \cite{HarperFoundations}.
+
+Singletons~\cite{SingletonsPaper} are used to preserve this type level at runtime, so that the
+code generator can generate SpectreGuard annotations where appropriate.
 
 In Fig. \ref{fig:SensTypes}, it is assumed that $\tau$ and $\sigma$ are given by the
 following grammar:
@@ -393,7 +398,11 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
 A further investigation into the tradeoffs and possible additional features of
 the information flow analysis is likely to be useful. This could provide a more
 accurate and succinct picture to programmers of where leaks are occurring, or
-potentially occurring.
+potentially occurring. It is possible that some of these other leak conditions
+could be incorporated into the type system, by exploiting the dependent type
+features enabled by singletons~\cite{SingletonsPaper} and, in the future, by Dependent Haskell.~\cite{DepHaskSpec}
+Dependent types provide a powerful technique for writing programs at a type-level, which
+will be executed at compile-time by the type checker.~\cite{CertProg}
 
 Additionally, features to safely convert between sensitivity levels could prove
 useful. A conversion from public to secret would be straightforward. A situational conversion
