@@ -323,6 +323,77 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
 
 ...
 
+\section{Examples}
+
+A couple of simple examples illustrate the basic typing rules:
+
+\begin{lstlisting}[language=haskell]
+example1 :: Cmd ()
+example1 = do
+  array1 <- allocSecret @Int 8
+  array2 <- allocSecret @Int 8
+
+  array2 .= array1
+\end{lstlisting}
+
+\noindent This first example passes the type checker with no problem: the array copy
+is being performed from one secret array to another secret array.
+
+The next example does not type check:
+
+\begin{lstlisting}[language=haskell]
+  -- This example fails to type check
+example2 :: Cmd ()
+example2 = do
+  array1 <- allocSecret @Int 8
+  array2 <- allocPublic @Int 8
+  (*@\color{red}array2 .= array1@*)
+\end{lstlisting}
+
+\noindent \ttt{example2} fails to type check since \ttt{array1} and \ttt{array2} have
+different sensitivity annotations, while the type of the \ttt{(.=)} operation
+requires that both arguments have the same sensitivity annotation. This restriction can
+be seen in the typing rule for \ttt{(.=)} in Fig. \ref{fig:SensTypes}.
+
+Turning to more complex examples, we can see that the following example type checks
+
+\begin{lstlisting}
+example3 :: Cmd ()
+example3 = do
+  arrayA <- allocSecret @Int 8
+  arrayB <- allocSecret @Int 8
+
+  for (0 :: Expr Secret Int) (\i -> ((i <? 8), (i += 1), do
+    (arrayA ! i) .= (arrayB ! i)))
+\end{lstlisting}
+
+\noindent This demonstrates a basic \ttt{for} loop and the array indexing syntax. Again, the
+only copies happen between two variables with the same sensitivity level, so this
+program is well-typed.
+
+The next slightly more complex example exhibits a limitation of this sensitivity type checking
+
+\begin{lstlisting}
+example4 :: Cmd ()
+example4 = do
+  secretArray <- allocSecret @Int 8
+  publicArray <- allocPublic @Int 8
+
+  for (0 :: Expr Public Int) (\i -> ((i <? 8), (i += 1), do
+    leak <- decl (0 :: Int)
+    for (0 :: Expr Secret Int) (\j -> ((j <? (secretArray ! i))
+                                      ,(j += 1)
+                                      ,do
+      leak += 1))
+    (publicArray ! i) .= leak))
+\end{lstlisting}
+
+In this code, the entire contents of the secret variable \ttt{secretArray} is leaked
+to the public variable \ttt{publicArray}, despite the two variables having different
+sensitivity annotations and therefore type checking without error. This is the
+result of information being indirectly leaked from the secret variable to the
+public variable via a control flow construct: in this case, the innermost \ttt{for} loop.
+
 \section{Information Flow Analysis}
 \begin{figure}[h]
   \centering
@@ -397,8 +468,7 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
 \label{fig:FlowRules}
 \end{figure}
 ...
-\section{Examples}
-...
+
 % \section{Your System}
 % ...
 % \section{Evaluation}
