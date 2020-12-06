@@ -137,7 +137,7 @@ This also outlines procedure that the C code generator uses.
   \begin{lstlisting}
   v <- decl x
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   int v = x;
   \end{lstlisting}\\
 
@@ -145,7 +145,7 @@ This also outlines procedure that the C code generator uses.
   \begin{lstlisting}
   v <- allocPublic @Int n
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   int v[n];
   \end{lstlisting}\\
 
@@ -153,7 +153,7 @@ This also outlines procedure that the C code generator uses.
   \begin{lstlisting}
   v <- allocPrivate @Int n
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   int v[n] __attribute__((__nospec__));
   \end{lstlisting}\\
 
@@ -161,7 +161,7 @@ This also outlines procedure that the C code generator uses.
   \begin{lstlisting}
   arrA .= arrB
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   memcpy(arrA, arrB, sizeof(arrA));
   \end{lstlisting}\\
 
@@ -169,7 +169,7 @@ This also outlines procedure that the C code generator uses.
   \begin{lstlisting}
   i .= j
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   i = j;
   \end{lstlisting}\\
 
@@ -177,7 +177,7 @@ This also outlines procedure that the C code generator uses.
   \begin{lstlisting}
   arr ! i
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   arr[i]
   \end{lstlisting}\\
 
@@ -185,7 +185,7 @@ This also outlines procedure that the C code generator uses.
   \begin{lstlisting}
   x <? y
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   x < y
   \end{lstlisting}\\
 
@@ -193,15 +193,15 @@ This also outlines procedure that the C code generator uses.
   \begin{lstlisting}
   while cond body
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   while ((*@$\overline{\ttt{cond}}$@*)) { (*@$\overline{\ttt{body}}$@*) }
   \end{lstlisting}\\
 
   \hline
   \begin{lstlisting}
-  if cond t f
+  ifThenElse cond t f
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   if ((*@$\overline{\ttt{cond}}$@*)) { (*@$\overline{\ttt{t}}$@*) } else { (*@$\overline{\ttt{f}}$@*) }
   \end{lstlisting}\\
 
@@ -211,7 +211,7 @@ This also outlines procedure that the C code generator uses.
     (\i ->
       (cond, update, body))
   \end{lstlisting}
-  & \begin{lstlisting}
+  & \begin{lstlisting}[language=C]
   for (int i = (*@$\overline{\ttt{init}}$@*); (*@$\overline{\ttt{cond}}$@*); (*@$\overline{\ttt{update}}$@*))
     { (*@$\overline{\ttt{body}}$@*) }
   \end{lstlisting}\\
@@ -333,7 +333,6 @@ example1 :: Cmd ()
 example1 = do
   array1 <- allocSecret @Int 8
   array2 <- allocSecret @Int 8
-
   array2 .= array1
 \end{lstlisting}
 
@@ -358,12 +357,11 @@ be seen in the typing rule for \ttt{(.=)} in Fig. \ref{fig:SensTypes}.
 
 Turning to more complex examples, we can see that the following example type checks
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Haskell]
 example3 :: Cmd ()
 example3 = do
   arrayA <- allocSecret @Int 8
   arrayB <- allocSecret @Int 8
-
   for (0 :: Expr Secret Int) (\i -> ((i <? 8), (i += 1), do
     (arrayA ! i) .= (arrayB ! i)))
 \end{lstlisting}
@@ -374,7 +372,7 @@ program is well-typed.
 
 The next slightly more complex example exhibits an important limitation of this sensitivity type checking:
 
-\begin{lstlisting}
+\begin{lstlisting}[language=Haskell]
 example4 :: Cmd ()
 example4 = do
   secretArray <- allocSecret @Int 8
@@ -383,8 +381,7 @@ example4 = do
   for (0 :: Expr Public Int) (\i -> ((i <? 8), (i += 1), do
     leak <- decl (0 :: Int)
     for (0 :: Expr Secret Int) (\j -> ((j <? (secretArray ! i))
-                                      ,(j += 1)
-                                      ,do
+                                      ,(j += 1), do
       leak += 1))
     (publicArray ! i) .= leak))
 \end{lstlisting}
@@ -446,37 +443,23 @@ example5 :: Cmd ()
 example5 = do
   secretArray <- allocSecret @Int 8
   publicArray <- allocPublic @Int 8
-
   for (0 :: Expr Public Int) (\i -> ((i <? 8), (i += 1), do
-
     leak <- decl (0 :: Int)
-
     for (0 :: Expr Secret Int) (\j -> ((j <? (secretArray ! i))
-                                      ,(j += 1)
-                                      ,do
-      leak += 1
-      ))
-    (publicArray ! i) .= leak
-    ))
-
+                                      ,(j += 1), do
+      leak += 1))
+    (publicArray ! i) .= leak))
   secretArrayA <- allocSecret @Int 8
   secretArrayB <- allocSecret @Int 8
   publicArray2 <- allocPublic @Int 8
-
   secretArrayA .= secretArray
   secretArrayB .= secretArrayA
-
   for (0 :: Expr Public Int) (\i -> ((i <? 8), (i += 1), do
-
     leak2 <- decl (0 :: Int)
-
     for (0 :: Expr Secret Int) (\j -> ((j <? (secretArrayB ! i))
-                                      ,(j += 1)
-                                      ,do
-      leak2 += 1
-      ))
-    (publicArray2 ! i) .= leak2
-    ))
+                                      ,(j += 1), do
+      leak2 += 1)
+    (publicArray2 ! i) .= leak2))
 \end{lstlisting}
 
 In the generated code for \ttt{example5}, we have the correspondence between variables in the EDSL code and the
