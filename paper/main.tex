@@ -265,9 +265,9 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
   \inference{n \in \mathbb{N}}{\ttt{$n$ :: Expr $\sigma$ Int}}\\
 \\
   \inference{%
-    \Gamma \vdash \ttt{x :: Int}
-    & \Gamma \vdash \ttt{y :: Int}}
-    {\Gamma \vdash \ttt{x + y :: Int}}\\
+    \Gamma \vdash \ttt{x :: Expr $\sigma$ Int}
+    & \Gamma \vdash \ttt{y :: Expr $\sigma$ Int}}
+    {\Gamma \vdash \ttt{x + y :: Expr $\sigma$ Int}}\\
   \\
   \inference{%
     \Gamma \vdash \ttt{x :: Expr $\sigma$ Int}
