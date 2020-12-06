@@ -388,13 +388,17 @@ example4 = do
     (publicArray ! i) .= leak))
 \end{lstlisting}
 
-In this code, the entire contents of the secret variable \ttt{secretArray} is leaked
-to the public variable \ttt{publicArray}, despite the two variables having different
-sensitivity annotations and therefore type checking without error. This is the
+Even though this code type checks without error, the entire contents of the secret variable \ttt{secretArray} is leaked
+to the public variable \ttt{publicArray}. The leak occurs despite the fact that the two variables have different
+sensitivity annotations. This is the
 result of information being indirectly leaked from the secret variable to the
 public variable via a control flow construct: in this case, the innermost \ttt{for} loop.
 
+This kind of leak directly motivates the analysis in Section \ref{sec:Analysis}. This analysis will perform
+some level of checking beyond the relatively basic sensitivity type check described so far.
+
 \section{Information Flow Analysis}
+\label{sec:Analysis}
 \begin{figure}[h]
   \centering
 \resizebox{0.68\linewidth}{!}{
