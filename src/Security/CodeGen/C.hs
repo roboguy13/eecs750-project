@@ -296,5 +296,5 @@ example10 = do
     ))
 
 example11 :: Cmd ()
-example11 = example8 >> example9
+example11 = example8 >> example10
 

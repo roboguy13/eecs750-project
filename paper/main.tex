@@ -324,6 +324,7 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
 ...
 
 \section{Examples}
+\label{sec:Examples}
 
 A couple of simple examples illustrate the basic typing rules:
 
@@ -399,6 +400,116 @@ some level of checking beyond the relatively basic sensitivity type check descri
 
 \section{Information Flow Analysis}
 \label{sec:Analysis}
+
+In Section \ref{sec:Examples}, a significant limitation of the sensitivity type checking
+was outlined. In this section we address this limitation using a static analysis technique.
+Possible leaks from secret variables to public variables via control flow constructs will
+be analyzed and the results of this analysis will be described in the form of
+a forest of trees, given in DOT format (which can then be converted to other formats,
+such as PDF)~\cite{DOT}. The C code generated from \ttt{example4} is shown in Fig. \ref{fig:GenC4}.
+Note that the secret array is named \verb|_fs_0| and the public array is named \verb|_fs_1| by the
+code generator. From the original \ttt{example4}, the information flow analyzer generates the
+graph given in Fig. \ref{fig:Analysis4}. Secret variables are represented as nodes with
+a rectangular shape and public variables are represented as nodes with an elliptic shape. An
+arrow going from one node to another represents a possible information leak from the first
+node to the second node due to a control flow construct.
+
+\begin{figure}[h]
+\begin{lstlisting}{language=C}
+int* _fs_0[8] __attribute__((nospec))__;
+int* _fs_1[8];
+for (int _fs_2 = 0; _fs_2 < 8; _fs_2 = _fs_2 + 1) {
+  int _fs_3 = 0;
+  for (int _fs_4 __attribute__((nospec))__ = 0;
+       _fs_4 < (_fs_0[_fs_2]);
+       _fs_4 = _fs_4 + 1) {
+    _fs_3 = _fs_3 + 1;
+  }
+  _fs_1[_fs_2] = _fs_3;
+}
+\end{lstlisting}
+\caption{C code generated from \ttt{example4}}
+\label{fig:GenC4}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+  \resizebox{0.3\columnwidth}{4cm}{\includegraphics{Diagrams/example4-analysis.pdf}}
+\caption{Results of leak analysis on \ttt{example4}}
+\label{fig:Analysis4}
+\end{figure}
+
+A more complicated example is \ttt{example6} in the following:
+
+\begin{lstlisting}[language=Haskell]
+example5 :: Cmd ()
+example5 = do
+  secretArray <- allocSecret @Int 8
+  publicArray <- allocPublic @Int 8
+
+  for (0 :: Expr Public Int) (\i -> ((i <? 8), (i += 1), do
+
+    leak <- decl (0 :: Int)
+
+    for (0 :: Expr Secret Int) (\j -> ((j <? (secretArray ! i))
+                                      ,(j += 1)
+                                      ,do
+      leak += 1
+      ))
+    (publicArray ! i) .= leak
+    ))
+
+  secretArrayA <- allocSecret @Int 8
+  secretArrayB <- allocSecret @Int 8
+  publicArray2 <- allocPublic @Int 8
+
+  secretArrayA .= secretArray
+  secretArrayB .= secretArrayA
+
+  for (0 :: Expr Public Int) (\i -> ((i <? 8), (i += 1), do
+
+    leak2 <- decl (0 :: Int)
+
+    for (0 :: Expr Secret Int) (\j -> ((j <? (secretArrayB ! i))
+                                      ,(j += 1)
+                                      ,do
+      leak2 += 1
+      ))
+    (publicArray2 ! i) .= leak2
+    ))
+\end{lstlisting}
+
+In the generated code for \ttt{example5}, we have the correspondence between variables in the EDSL code and the
+generated C code given in the table in TABLE \ref{table:Names5}. As both the C code generator and the
+static analysis tool use the same name generator, these names stay stable across the results of both. The analysis of \ttt{example5} is given in Fig. \ref{fig:Analysis5}.
+
+\begin{table}[h]
+  \centering
+  \begin{tabular}{|c|c|}
+    \hline
+    EDSL name & Generated C Name \\
+    \hline
+    \verb|secretArray| & \verb|_fs_0|\\
+    \verb|publicArray| & \verb|_fs_1|\\
+    \verb|leak| & \verb|_fs_3|\\
+    \verb|secretArrayA| & \verb|_fs_5|\\
+    \verb|secretArrayB| & \verb|_fs_6|\\
+    \verb|publicArray2| & \verb|_fs_7|\\
+    \verb|leak2| & \verb|_fs_9|\\
+    \hline
+  \end{tabular}
+\caption{Correspondence between EDSL names and generated C names for \ttt{example5}}
+\label{table:Names5}
+\end{table}
+
+\begin{figure}[h]
+\centering
+  \resizebox{0.3\columnwidth}{4cm}{\includegraphics{Diagrams/example5-analysis.pdf}}
+\caption{Results of leak analysis on \ttt{example5}}
+\label{fig:Analysis5}
+\end{figure}
+
+
 \begin{figure}[h]
   \centering
 \resizebox{0.68\linewidth}{!}{
