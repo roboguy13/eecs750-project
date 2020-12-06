@@ -262,7 +262,7 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
 \\
   \inference{}{\ttt{Secret :: Sensitivity}}\\
 \\
-  \inference{n \in \mathbb{N}}{\ttt{$n$ :: Int}}\\
+  \inference{n \in \mathbb{N}}{\ttt{$n$ :: Expr $\sigma$ Int}}\\
 \\
   \inference{%
     \Gamma \vdash \ttt{x :: Int}
