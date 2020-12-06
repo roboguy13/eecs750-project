@@ -11,6 +11,8 @@
 %\documentclass[times, 10pt,onecolumn]{article}
 \usepackage{amsmath, amssymb, enumerate}
 \usepackage{semantic}
+\usepackage{soul}
+\usepackage{listings}
 
 %%%%%%%%%%%%%%%% page control%%%%%%%%%%%%%%%%%
 %\usepackage[margin=0.75in]{geometry}
@@ -48,6 +50,7 @@
 %\bgroup \color{red}{} \egroup}
 \bgroup \color{red}{[FIXME: {#1}]} \egroup}
 
+\lstset{breaklines=true, basicstyle=\ttfamily\tiny, escapeinside={(*@}{@*)}}
 
 %\usepackage[pdftex]{hyperref}
 \usepackage{rotating,tabularx}
@@ -71,10 +74,13 @@
 \newtheorem{theorem}{Theorem}
 \newtheorem{lemma}[theorem]{Lemma}
 
+
 %% remaining budget share, used in task stall section.
 \newcommand{\bottomrule}{\hline}
 \newcommand{\toprule}{\hline}
 \newcommand{\midrule}{\hline}
+
+\setlength\extrarowheight{1.5pt}
 
 \newcommand{\ttt}{\texttt}
 \newcommand{\rarr}{\rightarrow}
@@ -92,7 +98,11 @@ University of Kansas, USA\\
 \thispagestyle{empty}
 \begin{abstract}
 
-Abstract goes here.
+  A Spectre mitigation strategy in the form of a mechanism for marking variables as "non-speculative" was developed in
+  \cite{SpectreGuard}. In this paper, we develop an embedded domain specific language (EDSL) in Haskell to provide
+  support for this feature. The static type system of Haskell is used so that many basic forms of copying
+  secret variables to public variables are disallowed. Additionally, a static analysis was developed which
+  will detect some cases of secret variables leaking to public variables via control flow constructs.
 
 \end{abstract}
 
@@ -102,12 +112,107 @@ Abstract goes here.
 Introduction goes here.
 
 \section{Background}
-Cite a paper \cite{barroso2009datacenter}.
+Cite a paper. % \cite{barroso2009datacenter}.
 
-Cite multiple papers \cite{banga99resourcecontainers,barroso2009datacenter}
+Cite multiple papers. % \cite{banga99resourcecontainers,barroso2009datacenter}
 
 \section{Syntax}
-...
+A correspondence between the syntax of the EDSL, which is inherited from
+Haskell, and the C language is given in Fig. \ref{fig:Syntax}. In the right column, an
+overline indicates that the transformation from EDSL to C is recursively
+performed to the expression or command underneath the overline.
+
+\begin{figure}[h]
+\begin{tabular}{|l|l|}
+  \hline
+  EDSL syntax & C syntax \\
+  \hline
+  \begin{lstlisting}
+  v <- decl x
+  \end{lstlisting}
+  & \begin{lstlisting}
+  int v = x;
+  \end{lstlisting}\\
+
+  \hline
+  \begin{lstlisting}
+  v <- allocPublic @Int n
+  \end{lstlisting}
+  & \begin{lstlisting}
+  int v[n];
+  \end{lstlisting}\\
+
+  \hline
+  \begin{lstlisting}
+  v <- allocPrivate @Int n
+  \end{lstlisting}
+  & \begin{lstlisting}
+  int v[n] __attribute__((__nospec__));
+  \end{lstlisting}\\
+
+  \hline
+  \begin{lstlisting}
+  arrA .= arrB
+  \end{lstlisting}
+  & \begin{lstlisting}
+  memcpy(arrA, arrB, sizeof(arrA));
+  \end{lstlisting}\\
+
+  \hline
+  \begin{lstlisting}
+  i .= j
+  \end{lstlisting}
+  & \begin{lstlisting}
+  i = j;
+  \end{lstlisting}\\
+
+  \hline
+  \begin{lstlisting}
+  arr ! i
+  \end{lstlisting}
+  & \begin{lstlisting}
+  arr[i]
+  \end{lstlisting}\\
+
+  \hline
+  \begin{lstlisting}
+  x <? y
+  \end{lstlisting}
+  & \begin{lstlisting}
+  x < y
+  \end{lstlisting}\\
+
+  \hline
+  \begin{lstlisting}
+  while cond body
+  \end{lstlisting}
+  & \begin{lstlisting}
+  while ((*@$\overline{\ttt{cond}}$@*)) { (*@$\overline{\ttt{body}}$@*) }
+  \end{lstlisting}\\
+
+  \hline
+  \begin{lstlisting}
+  if cond t f
+  \end{lstlisting}
+  & \begin{lstlisting}
+  if ((*@$\overline{\ttt{cond}}$@*)) { (*@$\overline{\ttt{t}}$@*) } else { (*@$\overline{\ttt{t}}$@*) }
+  \end{lstlisting}\\
+
+  \hline
+  \begin{lstlisting}
+  for init (\i -> (cond, update, body))
+  \end{lstlisting}
+  & \begin{lstlisting}
+  for (int i = (*@$\overline{\ttt{init}}$@*); (*@$\overline{\ttt{cond}}$@*); (*@$\overline{\ttt{update}}$@*))
+    { (*@$\overline{\ttt{body}}$@*) }
+  \end{lstlisting}\\
+
+
+  \hline
+\end{tabular}
+\caption{Syntax of the EDSL vs C syntax}
+\label{fig:Syntax}
+\end{figure}
 
 \section{Sensitivity Types}
 In Fig. \ref{fig:SensTypes}, it is assumed that $\tau$ and $\sigma$ are given by the
@@ -117,6 +222,16 @@ following grammar:
   \tau ::= \ttt{Int}\;|\;\ttt{Ptr}\;\tau\\
   \alpha ::= \ttt{Cmd ()}\;|\;\ttt{Cmd (Expr $\sigma$ $\tau$)}
 \end{gather*}
+
+A typing judgement is expressed with the syntax
+
+\begin{equation*}
+  \ttt{x :: $\beta$}
+\end{equation*}
+
+where \ttt{x} is some expression or command in the EDSL. This judgment means
+that \ttt{x} has type $\beta$. This is the same syntax used by Haskell, and by extension
+the EDSL, to explicitly specify a type in an expression.
 
 
 \begin{figure}[h]

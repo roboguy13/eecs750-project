@@ -5,6 +5,7 @@ all:
 	pdflatex main
 	bibtex main
 	pdflatex main
+	pdflatex main
 
 
 figs/%.pdf: figs/%.eps
