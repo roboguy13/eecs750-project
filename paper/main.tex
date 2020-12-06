@@ -371,7 +371,7 @@ example3 = do
 only copies happen between two variables with the same sensitivity level, so this
 program is well-typed.
 
-The next slightly more complex example exhibits a limitation of this sensitivity type checking
+The next slightly more complex example exhibits an important limitation of this sensitivity type checking:
 
 \begin{lstlisting}
 example4 :: Cmd ()
@@ -388,7 +388,7 @@ example4 = do
     (publicArray ! i) .= leak))
 \end{lstlisting}
 
-Even though this code type checks without error, the entire contents of the secret variable \ttt{secretArray} is leaked
+\noindent Even though this code type checks without error, the entire contents of the secret variable \ttt{secretArray} is leaked
 to the public variable \ttt{publicArray}. The leak occurs despite the fact that the two variables have different
 sensitivity annotations. This is the
 result of information being indirectly leaked from the secret variable to the
