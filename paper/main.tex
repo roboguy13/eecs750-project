@@ -10,7 +10,7 @@
 %\documentclass[10pt, conference]{IEEEtran}
 %\documentclass[times, 10pt,onecolumn]{article}
 \usepackage{amsmath, amssymb, enumerate}
-\usepackage{proof}
+\usepackage{semantic}
 
 %%%%%%%%%%%%%%%% page control%%%%%%%%%%%%%%%%%
 %\usepackage[margin=0.75in]{geometry}
@@ -75,8 +75,10 @@
 \newcommand{\bottomrule}{\hline}
 \newcommand{\toprule}{\hline}
 \newcommand{\midrule}{\hline}
+
 \newcommand{\ttt}{\texttt}
 \newcommand{\rarr}{\rightarrow}
+\newcommand{\sarr}{\leadsto}
 %-------------------------------------------------------------------------
 \begin{document}
 
@@ -108,40 +110,68 @@ Cite multiple papers \cite{banga99resourcecontainers,barroso2009datacenter}
 ...
 
 \section{Sensitivity Types}
+In Fig. \ref{fig:SensTypes}, it is assumed that $\tau$ and $\sigma$ are given by the
+following grammar:
+\begin{gather*}
+  \sigma ::= \ttt{Public}\;|\;\ttt{Secret}\\
+  \tau ::= \ttt{Int}\;|\;\ttt{Ptr}\;\tau\\
+  \alpha ::= \ttt{Cmd ()}\;|\;\ttt{Cmd (Expr $\sigma$ $\tau$)}
+\end{gather*}
+
+
 \begin{figure}[h]
   \centering
-\resizebox{0.5\linewidth}{!}{
+\resizebox{0.68\linewidth}{!}{
 \begin{minipage}{\linewidth}
+  \centering
 \begin{gather*}
-  \infer{\ttt{$n$ :: Int}}{n \in \mathbb{N}}\\
-  \infer{\ttt{Public :: Sensitivity}}{}\\
-  \infer{\ttt{Secret :: Sensitivity}}{}\\
-  \infer{\Gamma \vdash \ttt{x + y :: Int}}{%
+  \inference{}{\ttt{Public :: Sensitivity}}\\
+\\
+  \inference{}{\ttt{Secret :: Sensitivity}}\\
+\\
+  \inference{n \in \mathbb{N}}{\ttt{$n$ :: Int}}\\
+\\
+  \inference{%
     \Gamma \vdash \ttt{x :: Int}
-    & \Gamma \vdash \ttt{y :: Int}}\\
-  \infer{\Gamma \vdash \ttt{x <? y :: Expr $\sigma$ Bool}}{%
+    & \Gamma \vdash \ttt{y :: Int}}
+    {\Gamma \vdash \ttt{x + y :: Int}}\\
+  \\
+  \inference{%
     \Gamma \vdash \ttt{x :: Expr $\sigma$ Int}
-    & \Gamma \vdash \ttt{y :: Expr $\sigma$ Int}}\\
-  \infer{\Gamma \vdash \ttt{a ! i :: Expr $\sigma$ $\tau$}}{%
+    & \Gamma \vdash \ttt{y :: Expr $\sigma$ Int}}
+    {\Gamma \vdash \ttt{x <? y :: Expr $\sigma$ Bool}}\\
+  \\
+  \inference{%
     \Gamma \vdash \ttt{a :: Expr $\sigma$ (Ptr $\tau$)}
-    & \Gamma \vdash \ttt{i :: Expr $\sigma$ Int}}\\
-  \quad\infer{\Gamma \vdash \ttt{allocPublic @$\tau$ n :: Cmd (Expr Public (Ptr $\tau$))}}{\Gamma \vdash \ttt{n :: Int}}\\
-  \quad\infer{\Gamma \vdash \ttt{allocSecret @$\tau$ n :: Cmd (Expr Secret (Ptr $\tau$))}}{\Gamma \vdash \ttt{n :: Int}}\\
-  \infer{\Gamma \vdash \ttt{decl x :: Cmd (Expr Public $\tau$)}}{\Gamma \vdash \ttt{x :: $\tau$}}\\
-  \infer{\Gamma \vdash \ttt{x .= y :: Cmd ()}}{%
+    & \Gamma \vdash \ttt{i :: Expr $\sigma$ Int}}
+    {\Gamma \vdash \ttt{a ! i :: Expr $\sigma$ $\tau$}}\\
+  \\
+  \inference{\Gamma \vdash \ttt{n :: Int}}{\Gamma \vdash \ttt{allocPublic @$\tau$ n :: Cmd (Expr Public (Ptr $\tau$))}}\\
+\\
+  \inference{\Gamma \vdash \ttt{n :: Int}}{\Gamma \vdash \ttt{allocSecret @$\tau$ n :: Cmd (Expr Secret (Ptr $\tau$))}}\\
+\\
+  \inference{\Gamma \vdash \ttt{x :: $\tau$}}{\Gamma \vdash \ttt{decl x :: Cmd (Expr Public $\tau$)}}\\
+\\
+  \inference{%
     \Gamma \vdash \ttt{x :: Expr $\sigma$ $\tau$}
-    & \Gamma \vdash \ttt{y :: Expr $\sigma$ $\tau$}}\\
-  \infer{\Gamma \vdash \ttt{ifThenElse cond t f :: Cmd ()}}{%
+    & \Gamma \vdash \ttt{y :: Expr $\sigma$ $\tau$}}
+    {\Gamma \vdash \ttt{x .= y :: Cmd ()}}\\
+  \\
+  \inference{%
     \Gamma \vdash \ttt{cond :: Expr $\sigma$ Bool}
     &\Gamma \vdash \ttt{t :: $\tau$}
-    &\Gamma \vdash \ttt{f :: $\tau$}}\\
-  \infer{\Gamma \vdash \ttt{while cond body :: Cmd ()}}{%
+    &\Gamma \vdash \ttt{f :: $\tau$}}
+    {\Gamma \vdash \ttt{ifThenElse cond t f :: Cmd ()}}\\
+  \\
+  \inference{%
     \Gamma \vdash \ttt{cond :: Expr $\sigma$ Bool}
-    & \Gamma \vdash \ttt{body :: Cmd $\tau$}}\\
-  \infer{\Gamma \vdash \ttt{for init fn :: Cmd ()}}{%
-    \Gamma \vdash \ttt{init :: Expr $\sigma$ $\tau$}
-    & \Gamma \vdash \ttt{fn :: Expr $\sigma$ $\tau$ $\rarr$ (Expr $\sigma$ Bool, Cmd (), Cmd ())}
-    }
+    & \Gamma \vdash \ttt{body :: Cmd $\alpha$}}
+    {\Gamma \vdash \ttt{while cond body :: Cmd ()}}\\
+  \\
+  \inference{%
+    \Gamma \vdash \ttt{init :: Expr $\sigma$ $\tau$}\\
+    \Gamma \vdash \ttt{fn :: Expr $\sigma$ $\tau$ $\rarr$ (Expr $\sigma$ Bool, Cmd (), Cmd ())}
+    }{\Gamma \vdash \ttt{for init fn :: Cmd ()}}
 \end{gather*}
 \end{minipage}}
   \caption{Typing rules for sensitivity types}
@@ -151,6 +181,78 @@ Cite multiple papers \cite{banga99resourcecontainers,barroso2009datacenter}
 ...
 
 \section{Information Flow Analysis}
+\begin{figure}[h]
+  \centering
+\resizebox{0.68\linewidth}{!}{
+\begin{minipage}{\linewidth}
+  \centering
+\begin{gather*}
+  \inference{%
+    \Delta;\Gamma \vdash \ttt{x :: $\tau$}
+    \\ \Delta;\Gamma \vdash \ttt{k :: Expr Public $\tau$ $\rarr$ Cmd $\alpha$}
+    \\ \Delta;\Gamma\vdash A(\ttt{decl v >>= ($\lambda$x $\rarr$ k)})
+    }
+    {%
+      \Delta,Pub(x);\Gamma \vdash A(\ttt{k})
+    }\\
+    \\
+  \inference{%
+    \Delta;\Gamma \vdash \ttt{x :: Expr Public $\tau$}
+    & \Delta;\Gamma \vdash \ttt{y :: Expr Public $\tau$}
+    \\ \Delta;\Gamma \vdash \ttt{k :: () $\rarr$ Cmd $\alpha$}
+    & \Delta;\Gamma \vdash A(\ttt{(x .= y) >>= k})
+    \\ \Delta;\Gamma \vdash L(\ttt{x}) \neq \varnothing
+    }
+    {%
+      \Delta;\Gamma \vdash \ttt{x} \sarr L(\ttt{x})
+    }\\
+  \\
+  \inference{%
+    \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
+    & \Delta;\Gamma \vdash \ttt{body :: Cmd $\alpha$}
+    \\ \Delta;\Gamma \vdash A(\ttt{while cond body})
+    & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
+    \\ \Delta;\Gamma \vdash Pub(\ttt{x})
+    }
+    {%
+      \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{body})
+    }\\
+  \\
+  \inference{%
+    \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
+    \\ \Delta;\Gamma \vdash \ttt{t :: Cmd $\alpha$}
+    & \Delta;\Gamma \vdash \ttt{f :: Cmd $\alpha$}
+    \\ \Delta;\Gamma \vdash A(\ttt{if cond t f})
+    & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
+    \\ \Delta;\Gamma \vdash Pub(\ttt{x})
+    }
+    {%
+      \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{t})
+    }\\
+  \\
+  \inference{%
+    \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
+    \\ \Delta;\Gamma \vdash \ttt{t :: Cmd $\alpha$}
+    & \Delta;\Gamma \vdash \ttt{f :: Cmd $\alpha$}
+    \\ \Delta;\Gamma \vdash A(\ttt{if cond t f})
+    & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
+    \\ \Delta;\Gamma \vdash Pub(\ttt{x})
+    }
+    {%
+      \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{f})
+    }\\
+  \\
+  \inference{%
+    \Delta;\Gamma \vdash v \in L(\ttt{x})
+    }
+    {%
+      \Delta;\Gamma \vdash L(\ttt{x}) \neq \varnothing
+    }
+\end{gather*}
+\end{minipage}}
+  \caption{Information flow analysis rules which define the relation $\sarr$}
+\label{fig:FlowRules}
+\end{figure}
 ...
 \section{Examples}
 ...
