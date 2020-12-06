@@ -56,13 +56,16 @@ instance Repr () where
 
 instance Repr a => Repr (Name s a) where
 
-genDecl :: forall (s :: Sensitivity) a. (Repr a) => CType a -> Name s a -> String
-genDecl ty n =
+genDecl :: forall (s :: Sensitivity) a. (Repr a) => Maybe Int -> CType a -> Name s a -> String
+genDecl sizeMaybe ty n =
   case nameSens n of
     PublicSing -> leftPart
     SecretSing -> unwords [leftPart, "__attribute__((nospec))__"]
   where
-    leftPart = unwords [typeRepr ty, emitName n]
+    leftPart =
+      case sizeMaybe of
+        Just size -> unwords [typeRepr ty, emitName n <> "[" <> show size <> "]"]
+        _ -> unwords [typeRepr ty, emitName n]
 
 
   -- case sing :: Sing s of

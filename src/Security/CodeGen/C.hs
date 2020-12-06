@@ -35,22 +35,19 @@ genC0 withSemi c =
     Return x -> return "" -- Commands cannot have values in this subset of C
 
     AllocSecret name size :>>= (k :: Expr s b -> _) -> do
-      let d = ptrTypeRepr (ctype @b) <> " " <> emitName name <> "[" <> show size <> "]"
-      -- let d = genDecl ctype name
-      --     alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
+      let d = genDecl (Just size) ctype name
       r <- genCNamed (mkCmd0 (k (Var name)))
 
       return $ unlines'With r [stmt' withSemi [d]]
 
     AllocPublic name size :>>= (k :: Expr s b -> _) -> do
-      let d = ptrTypeRepr (ctype @b) <> " " <> emitName name <> "[" <> show size <> "]"
-      -- let d = genDecl ctype name
-      --     alloc = "malloc(" <> show size <> " * sizeof(" <> ptrTypeRepr (ctype @b) <> "))"
+      -- let d = ptrTypeRepr (ctype @b) <> " " <> emitName name <> "[" <> show size <> "]"
+      let d = genDecl (Just size) ctype name
       r <- genCNamed (mkCmd0 (k (Var name)))
       return $ unlines'With r [stmt' withSemi [d]]
 
     Decl name x :>>= k -> do
-      let d = genDecl ctype name
+      let d = genDecl Nothing ctype name
           vName = Var name
       xCode <- genExprC (Literal @Public x)
       r <- genCNamed (mkCmd0 (k vName))
@@ -117,7 +114,7 @@ genC0 withSemi c =
       r <- genCNamed (mkCmd0 (k ()))
 
       return $ unlines'With r
-        ["for (" ++ genDecl ctype loopVar ++ " = " ++ initCode ++ "; " ++ condCode ++ "; " ++ updateCode ++ ") {"
+        ["for (" ++ genDecl Nothing ctype loopVar ++ " = " ++ initCode ++ "; " ++ condCode ++ "; " ++ updateCode ++ ") {"
         ,block bodyCode
         ,"}"
         ]
