@@ -418,13 +418,11 @@ node to the second node due to a control flow construct.
 
 \begin{figure}
 \begin{lstlisting}{language=C}
-int* _fs_0[8] __attribute__((nospec))__;
-int* _fs_1[8];
+int _fs_0[8] __attribute__((nospec))__;
+int _fs_1[8];
 for (int _fs_2 = 0; _fs_2 < 8; _fs_2 = _fs_2 + 1) {
   int _fs_3 = 0;
-  for (int _fs_4 __attribute__((nospec))__ = 0;
-       _fs_4 < (_fs_0[_fs_2]);
-       _fs_4 = _fs_4 + 1) {
+  for (int _fs_4 __attribute__((nospec))__ = 0; _fs_4 < (_fs_0[_fs_2]); _fs_4 = _fs_4 + 1) {
     _fs_3 = _fs_3 + 1;
   }
   _fs_1[_fs_2] = _fs_3;
@@ -482,7 +480,7 @@ of the output and prevent it from being too overwhelming to the programmer.
   \centering
   \begin{tabular}{|c|c|}
     \hline
-    EDSL name & Generated C Name \\
+    EDSL name in \ttt{example5} & Generated C Name \\
     \hline
     \verb|secretArray| & \verb|_fs_0|\\
     \verb|publicArray| & \verb|_fs_1|\\
