@@ -87,6 +87,9 @@
 \newcommand{\ttt}{\texttt}
 \newcommand{\rarr}{\rightarrow}
 \newcommand{\sarr}{\leadsto}
+
+% \addtolength{\jot}{3mm}
+
 %-------------------------------------------------------------------------
 \begin{document}
 
@@ -257,57 +260,44 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
 \resizebox{0.68\linewidth}{!}{
 \begin{minipage}{\linewidth}
   \centering
+  \openup 3mm
 \begin{gather*}
   \inference{}{\ttt{Public :: Sensitivity}}\\
-\\
   \inference{}{\ttt{Secret :: Sensitivity}}\\
-\\
   \inference{n \in \mathbb{N}}{\ttt{$n$ :: Int}}\\
-  \\
   \inference{n \in \mathbb{N}}{\ttt{$n$ :: Expr $\sigma$ Int}}\\
-\\
   \inference{%
     \Gamma \vdash \ttt{x :: Expr $\sigma$ Int}
     & \Gamma \vdash \ttt{y :: Expr $\sigma$ Int}}
     {\Gamma \vdash \ttt{x + y :: Expr $\sigma$ Int}}\\
-  \\
   \inference{%
     \Gamma \vdash \ttt{x :: Expr $\sigma$ Int}
     & \Gamma \vdash \ttt{y :: Expr $\sigma$ Int}}
     {\Gamma \vdash \ttt{x <? y :: Expr $\sigma$ Bool}}\\
-  \\
   \inference{%
     \Gamma \vdash \ttt{a :: Expr $\sigma$ (Ptr $\tau$)}
     & \Gamma \vdash \ttt{i :: Expr $\sigma$ Int}}
     {\Gamma \vdash \ttt{a ! i :: Expr $\sigma$ $\tau$}}\\
-  \\
   \inference{\Gamma \vdash \ttt{n :: Int}}{\Gamma \vdash \ttt{allocPublic @$\tau$ n :: Cmd (Expr Public (Ptr $\tau$))}}\\
-\\
   \inference{\Gamma \vdash \ttt{n :: Int}}{\Gamma \vdash \ttt{allocSecret @$\tau$ n :: Cmd (Expr Secret (Ptr $\tau$))}}\\
-\\
   \inference{\Gamma \vdash \ttt{x :: $\tau$}}{\Gamma \vdash \ttt{decl x :: Cmd (Expr Public $\tau$)}}\\
-\\
   \inference{%
     \Gamma \vdash \ttt{x :: Expr $\sigma$ $\tau$}
     & \Gamma \vdash \ttt{y :: Expr $\sigma$ $\tau$}}
     {\Gamma \vdash \ttt{x .= y :: Cmd ()}}\\
-  \\
   \inference{%
     \Gamma \vdash \ttt{cond :: Expr $\sigma$ Bool}
     &\Gamma \vdash \ttt{t :: $\tau$}
     &\Gamma \vdash \ttt{f :: $\tau$}}
     {\Gamma \vdash \ttt{ifThenElse cond t f :: Cmd ()}}\\
-  \\
   \inference{%
     \Gamma \vdash \ttt{cond :: Expr $\sigma$ Bool}
     & \Gamma \vdash \ttt{body :: Cmd $\alpha$}}
     {\Gamma \vdash \ttt{while cond body :: Cmd ()}}\\
-  \\
   \inference{%
     \Gamma \vdash \ttt{init :: Expr $\sigma$ $\tau$}\\
     \Gamma \vdash \ttt{fn :: Expr $\sigma$ $\tau$ $\rarr$ (Expr $\sigma$ Bool, Cmd (), Cmd ())}
     }{\Gamma \vdash \ttt{for init fn :: Cmd ()}}\\
-  \\
   \inference{%
     \Gamma \vdash \ttt{c :: Cmd (Expr $\sigma$ $\tau$)}
     & \ttt{x} \notin dom(\Gamma)
