@@ -300,8 +300,7 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
     }{\Gamma \vdash \ttt{for init fn :: Cmd ()}}\\
   \inference{%
     \Gamma \vdash \ttt{c :: Cmd (Expr $\sigma$ $\tau$)}
-    & \ttt{x} \notin dom(\Gamma)
-    \\ \Gamma \vdash \ttt{($\lambda$ x $\rarr$ body) :: Expr $\sigma$ $\tau$ $\rarr$ Cmd $\alpha$}
+    \\ \Gamma,\ttt{(x :: Expr $\sigma$ $\tau$)} \vdash \ttt{body :: Cmd $\alpha$}
   }{%
     \Gamma \vdash \ttt{(\textbf{do} \{ x <- c; body \}) :: Cmd $\alpha$}
   }
