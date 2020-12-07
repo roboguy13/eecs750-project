@@ -20,7 +20,7 @@ data Ptr a
 data CType a where
   CInt :: CType Int
   CBool :: CType Bool
-  CPtr :: forall a. CType a -> CType (Ptr a)
+  CPtr :: forall a. Repr a => CType a -> CType (Ptr a)
 
 deriving instance Show (CType a)
 
@@ -64,7 +64,10 @@ genDecl sizeMaybe ty n =
   where
     leftPart =
       case sizeMaybe of
-        Just size -> unwords [typeRepr ty, emitName n <> "[" <> show size <> "]"]
+        Just size ->
+          case ty of
+            CPtr ty' -> unwords [typeRepr ty', emitName n <> "[" <> show size <> "]"]
+            _ -> error "size given with a non-pointer type"
         _ -> unwords [typeRepr ty, emitName n]
 
 
