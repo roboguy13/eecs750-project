@@ -236,11 +236,29 @@ EDSL syntax are given in Section \ref{sec:Examples}.
 \end{figure}
 
 \section{Sensitivity Types}
-The Haskell type system is leveraged to perform a basic static consistency check of the sensitivities
-of variables, so that a variable does not get assigned to a variable of a different sensitivity. This
-is done by making the \verb|Expr| type constructor take a phantom type argument~\cite{Phantom}. The
-logical inference rules corresponding to this check are given in Fig. \ref{fig:SensTypes}. An introduction
-to this style of inference rule system, with many examples and applications in the study of programming languages, is given in \cite{HarperFoundations}.
+The Haskell type system is leveraged to perform a basic static consistency check
+of the sensitivities of variables, so that a variable does not get assigned to a
+variable of a different sensitivity. This is done by making the \verb|Expr| type
+constructor take a phantom type argument~\cite{Phantom}. The phantom type
+argument is the \textit{sensitivity type} of that expression.  The logical
+inference rules corresponding to this check are given in Fig.
+\ref{fig:SensTypes}. Note that the EDSL inherits the rest of Haskell's type
+system in addition to these rules. Only the aspects of the type system that is
+particularly relevant to the EDSL is reflected in the figure, often specialized
+to the particular scenario encountered in using sensitivity types in the EDSL.
+An introduction to this style of inference rule system, with many examples and
+applications in the study of programming languages, is given in
+\cite{HarperFoundations}.
+
+Observe that an two expressions with different sensitivity types cannot be
+combined into a larger compound expression. However, commands (represented by
+the \verb|Cmd| type constructor) often have expressions embedded in them and
+commands can be sequenced with each other.  There is no restriction on how two
+commands can be combined, even if they involve expressions with different
+sensitivity types. This freedom in combining commands independently of
+sensitivity foreshadows the essence of the problem we will encounter in
+Section \ref{sec:Analysis}. For now, note that all control flow constructs are
+part of the command type (as opposed to the expression type).
 
 Singletons~\cite{SingletonsPaper} are used to preserve this type level at runtime, so that the
 code generator can generate SpectreGuard annotations where appropriate. These annotations can
@@ -254,13 +272,13 @@ following grammar:
   \alpha ::= \ttt{Cmd ()}\;|\;\ttt{Cmd (Expr $\sigma$ $\tau$)}
 \end{gather*}
 
-A typing judgement is expressed with the syntax
+\noindent A typing judgement is expressed with the syntax
 
 \begin{equation*}
   \ttt{x :: $\beta$}
 \end{equation*}
 
-where \ttt{x} is some expression or command in the EDSL. This judgement means
+\noindent where \ttt{x} is some expression or command in the EDSL. This judgement means
 that \ttt{x} has type $\beta$. This is also the same syntax used by Haskell, and by extension
 the EDSL, to explicitly specify the type of any expression when necessary or desired.
 
