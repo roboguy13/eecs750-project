@@ -104,7 +104,7 @@ University of Kansas, USA\\
 \begin{abstract}
 
   A Spectre mitigation strategy in the form of a mechanism for marking variables
-  as "non-speculative" was developed in \cite{SpectreGuard}. In this paper, we
+  as ``non-speculative'' was developed in \cite{SpectreGuard}. In this paper, we
   develop an embedded domain specific language (EDSL) in Haskell to provide
   support for this feature, with a backend that generates C code. The static
   type system of Haskell is used so that many basic forms of copying secret
@@ -130,9 +130,18 @@ Haskell, and the C language is given in Fig. \ref{fig:Syntax}. In the right colu
 overline indicates that the transformation from EDSL to C is recursively
 performed to the expression or command underneath the overline.
 
-This also outlines procedure that the C code generator uses.
+This also outlines procedure that the C code generator uses. When code written
+in the EDSL is transformed into C code, a name generator first annotates the abstract syntax tree
+(AST). This annotated AST can be used by both the code generator and the information flow
+leak analysis tool (the latter is described in Section \ref{sec:Analysis}).
 
-\begin{figure}[h]
+Code can be written in this EDSL by importing the EDSL's package in standard
+Haskell code and using the Glasgow Haskell Compiler (GHC) to compile the code.
+Note that as a result of this design, all standard Haskell programming language
+constructs are available for metaprogramming purposes.  Examples written in this
+EDSL syntax are given in Section \ref{sec:Examples}.
+
+\begin{figure}
 \begin{tabular}{|l|l|}
   \hline
   EDSL syntax & C syntax \\
@@ -234,7 +243,8 @@ logical inference rules corresponding to this check are given in Fig. \ref{fig:S
 to this style of inference rule system, with many examples and applications in the study of programming languages, is given in \cite{HarperFoundations}.
 
 Singletons~\cite{SingletonsPaper} are used to preserve this type level at runtime, so that the
-code generator can generate SpectreGuard annotations where appropriate.
+code generator can generate SpectreGuard annotations where appropriate. These annotations can
+then be used by the SpectreGuard mitigation system.~\cite{SpectreGuard}
 
 In Fig. \ref{fig:SensTypes}, it is assumed that $\tau$ and $\sigma$ are given by the
 following grammar:
@@ -255,9 +265,9 @@ that \ttt{x} has type $\beta$. This is also the same syntax used by Haskell, and
 the EDSL, to explicitly specify the type of any expression when necessary or desired.
 
 
-\begin{figure}[h]
+\begin{figure}
   \centering
-\resizebox{0.68\linewidth}{!}{
+\resizebox{0.67\linewidth}{!}{
 \begin{minipage}{\linewidth}
   \centering
   \openup 3mm
@@ -406,7 +416,7 @@ a rectangular shape and public variables are represented as nodes with an ellipt
 arrow going from one node to another represents a possible information leak from the first
 node to the second node due to a control flow construct.
 
-\begin{figure}[h]
+\begin{figure}
 \begin{lstlisting}{language=C}
 int* _fs_0[8] __attribute__((nospec))__;
 int* _fs_1[8];
@@ -424,7 +434,7 @@ for (int _fs_2 = 0; _fs_2 < 8; _fs_2 = _fs_2 + 1) {
 \label{fig:GenC4}
 \end{figure}
 
-\begin{figure}[h]
+\begin{figure}
 \centering
   \resizebox{0.3\columnwidth}{4cm}{\includegraphics{Diagrams/example4-analysis.pdf}}
 \caption{Results of leak analysis on \ttt{example4}}
@@ -461,7 +471,14 @@ In the generated code for \ttt{example5}, we have the correspondence between var
 generated C code given in the table in TABLE \ref{table:Names5}. As both the C code generator and the
 static analysis tool use the same name generator, these names stay stable across the results of both. The analysis of \ttt{example5} is given in Fig. \ref{fig:Analysis5}.
 
-\begin{table}[h]
+The tree in resulting from the analysis shows that \ttt{secretArray} leaks to \ttt{leak}. Also, \ttt{secretArray} flows to
+to \ttt{secretArrayA}, which flows to \ttt{secretArrayB}. Finally, \ttt{secretArrayB} leaks to \ttt{leak2}. Once
+the analysis generates these trees, only the branches which ultimately end in a leak to a public variable
+are kept. Branches which never lead to a public variable are thrown out. Also, information flow from one
+public variable to another public variable is not represented. This choice was made to limit the size
+of the output and prevent it from being too overwhelming to the programmer.
+
+\begin{table}
   \centering
   \begin{tabular}{|c|c|}
     \hline
@@ -480,7 +497,7 @@ static analysis tool use the same name generator, these names stay stable across
 \label{table:Names5}
 \end{table}
 
-\begin{figure}[h]
+\begin{figure}
 \centering
   \resizebox{0.3\columnwidth}{4cm}{\includegraphics{Diagrams/example5-analysis.pdf}}
 \caption{Results of leak analysis on \ttt{example5}}
@@ -488,78 +505,78 @@ static analysis tool use the same name generator, these names stay stable across
 \end{figure}
 
 
-\begin{figure}[h]
-  \centering
-\resizebox{0.68\linewidth}{!}{
-\begin{minipage}{\linewidth}
-  \centering
-\begin{gather*}
-  \inference{%
-    \Delta;\Gamma \vdash \ttt{x :: $\tau$}
-    \\ \Delta;\Gamma \vdash \ttt{k :: Expr Public $\tau$ $\rarr$ Cmd $\alpha$}
-    \\ \Delta;\Gamma\vdash A(\ttt{decl v >>= ($\lambda$x $\rarr$ k)})
-    }
-    {%
-      \Delta,Pub(x);\Gamma \vdash A(\ttt{k})
-    }\\
-    \\
-  \inference{%
-    \Delta;\Gamma \vdash \ttt{x :: Expr Public $\tau$}
-    & \Delta;\Gamma \vdash \ttt{y :: Expr Public $\tau$}
-    \\ \Delta;\Gamma \vdash \ttt{k :: () $\rarr$ Cmd $\alpha$}
-    & \Delta;\Gamma \vdash A(\ttt{(x .= y) >>= k})
-    \\ \Delta;\Gamma \vdash L(\ttt{x}) \neq \varnothing
-    }
-    {%
-      \Delta;\Gamma \vdash \ttt{x} \sarr L(\ttt{x})
-    }\\
-  \\
-  \inference{%
-    \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
-    & \Delta;\Gamma \vdash \ttt{body :: Cmd $\alpha$}
-    \\ \Delta;\Gamma \vdash A(\ttt{while cond body})
-    & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
-    \\ \Delta;\Gamma \vdash Pub(\ttt{x})
-    }
-    {%
-      \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{body})
-    }\\
-  \\
-  \inference{%
-    \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
-    \\ \Delta;\Gamma \vdash \ttt{t :: Cmd $\alpha$}
-    & \Delta;\Gamma \vdash \ttt{f :: Cmd $\alpha$}
-    \\ \Delta;\Gamma \vdash A(\ttt{if cond t f})
-    & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
-    \\ \Delta;\Gamma \vdash Pub(\ttt{x})
-    }
-    {%
-      \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{t})
-    }\\
-  \\
-  \inference{%
-    \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
-    \\ \Delta;\Gamma \vdash \ttt{t :: Cmd $\alpha$}
-    & \Delta;\Gamma \vdash \ttt{f :: Cmd $\alpha$}
-    \\ \Delta;\Gamma \vdash A(\ttt{if cond t f})
-    & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
-    \\ \Delta;\Gamma \vdash Pub(\ttt{x})
-    }
-    {%
-      \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{f})
-    }\\
-  \\
-  \inference{%
-    \Delta;\Gamma \vdash v \in L(\ttt{x})
-    }
-    {%
-      \Delta;\Gamma \vdash L(\ttt{x}) \neq \varnothing
-    }
-\end{gather*}
-\end{minipage}}
-  \caption{Information flow analysis rules which define the relation $\sarr$}
-\label{fig:FlowRules}
-\end{figure}
+% \begin{figure}[h]
+%   \centering
+% \resizebox{0.68\linewidth}{!}{
+% \begin{minipage}{\linewidth}
+%   \centering
+% \begin{gather*}
+%   \inference{%
+%     \Delta;\Gamma \vdash \ttt{x :: $\tau$}
+%     \\ \Delta;\Gamma \vdash \ttt{k :: Expr Public $\tau$ $\rarr$ Cmd $\alpha$}
+%     \\ \Delta;\Gamma\vdash A(\ttt{decl v >>= ($\lambda$x $\rarr$ k)})
+%     }
+%     {%
+%       \Delta,Pub(x);\Gamma \vdash A(\ttt{k})
+%     }\\
+%     \\
+%   \inference{%
+%     \Delta;\Gamma \vdash \ttt{x :: Expr Public $\tau$}
+%     & \Delta;\Gamma \vdash \ttt{y :: Expr Public $\tau$}
+%     \\ \Delta;\Gamma \vdash \ttt{k :: () $\rarr$ Cmd $\alpha$}
+%     & \Delta;\Gamma \vdash A(\ttt{(x .= y) >>= k})
+%     \\ \Delta;\Gamma \vdash L(\ttt{x}) \neq \varnothing
+%     }
+%     {%
+%       \Delta;\Gamma \vdash \ttt{x} \sarr L(\ttt{x})
+%     }\\
+%   \\
+%   \inference{%
+%     \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
+%     & \Delta;\Gamma \vdash \ttt{body :: Cmd $\alpha$}
+%     \\ \Delta;\Gamma \vdash A(\ttt{while cond body})
+%     & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
+%     \\ \Delta;\Gamma \vdash Pub(\ttt{x})
+%     }
+%     {%
+%       \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{body})
+%     }\\
+%   \\
+%   \inference{%
+%     \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
+%     \\ \Delta;\Gamma \vdash \ttt{t :: Cmd $\alpha$}
+%     & \Delta;\Gamma \vdash \ttt{f :: Cmd $\alpha$}
+%     \\ \Delta;\Gamma \vdash A(\ttt{if cond t f})
+%     & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
+%     \\ \Delta;\Gamma \vdash Pub(\ttt{x})
+%     }
+%     {%
+%       \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{t})
+%     }\\
+%   \\
+%   \inference{%
+%     \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
+%     \\ \Delta;\Gamma \vdash \ttt{t :: Cmd $\alpha$}
+%     & \Delta;\Gamma \vdash \ttt{f :: Cmd $\alpha$}
+%     \\ \Delta;\Gamma \vdash A(\ttt{if cond t f})
+%     & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
+%     \\ \Delta;\Gamma \vdash Pub(\ttt{x})
+%     }
+%     {%
+%       \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{f})
+%     }\\
+%   \\
+%   \inference{%
+%     \Delta;\Gamma \vdash v \in L(\ttt{x})
+%     }
+%     {%
+%       \Delta;\Gamma \vdash L(\ttt{x}) \neq \varnothing
+%     }
+% \end{gather*}
+% \end{minipage}}
+%   \caption{Information flow analysis rules which define the relation $\sarr$}
+% \label{fig:FlowRules}
+% \end{figure}
 ...
 
 % \section{Your System}
@@ -581,6 +598,20 @@ Additionally, features to safely convert between sensitivity levels could prove
 useful. A conversion from public to secret would be straightforward. A situational conversion
 going the other direction could be provided by an instruction in the EDSL
 which might perform a Spectre mitigation measure, such as a cache flush. \cite{PLtea-james}
+
+More primitive operations and support for a foreign function interface (FFI)
+with C would make the EDSL more practical. This would be straightforward to add,
+as the system already closely resembles C code and generates C code.
+
+The sensitivity checking and the analysis tool could be added as an extension to
+a C compiler, via a plugin mechanism such as Clang's plugin system. This would
+have the benefits of familiarity with the language and easy interoperability
+with existing C libraries. Drawbacks would include the fact that the sensitivity type
+checking would need to be created from scratch, rather than being based on an existing, well-tested,
+type system (such as Haskell's). This would also lack the potential metaprogramming
+benefits of using an embedded DSL: creation of EDSL code can be automated using
+regular Haskell code within the EDSL. For example, a loop can be explicitly unrolled while
+at the same time preserving the brevity of using a loop.
 
 \section{Conclusion}
 ...
