@@ -435,6 +435,8 @@ arrow going from one node to another represents a possible information leak from
 node to the second node due to a control flow construct.
 
 \begin{figure}
+\begin{center}
+\begin{tabular}{c}
 \begin{lstlisting}{language=C}
 int _fs_0[8] __attribute__((nospec))__;
 int _fs_1[8];
@@ -448,6 +450,8 @@ for (int _fs_2 = 0; _fs_2 < 8; _fs_2 = _fs_2 + 1) {
   _fs_1[_fs_2] = _fs_3;
 }
 \end{lstlisting}
+\end{tabular}
+\end{center}
 \caption{C code generated from \ttt{example4}}
 \label{fig:GenC4}
 \end{figure}
