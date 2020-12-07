@@ -131,9 +131,11 @@ overline indicates that the transformation from EDSL to C is recursively
 performed to the expression or command underneath the overline.
 
 This also outlines procedure that the C code generator uses. When code written
-in the EDSL is transformed into C code, a name generator first annotates the abstract syntax tree
-(AST). This annotated AST can be used by both the code generator and the information flow
-leak analysis tool (the latter is described in Section \ref{sec:Analysis}).
+in the EDSL is transformed into C code, a name generator first annotates the
+abstract syntax tree (AST) with globally unique names (enforcing the Barendregt
+variable convention; see Chapter 2 in~\cite{BarendregtConversion}). This annotated AST can be used by both the code generator and the
+information flow leak analysis tool (the latter is described in Section
+\ref{sec:Analysis}).
 
 Code can be written in this EDSL by importing the EDSL's package in standard
 Haskell code and using the Glasgow Haskell Compiler (GHC) to compile the code.
