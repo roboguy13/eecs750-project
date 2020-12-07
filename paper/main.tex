@@ -303,6 +303,12 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
     \\ \Gamma,\ttt{(x :: Expr $\sigma$ $\tau$)} \vdash \ttt{rest :: Cmd $\alpha$}
   }{%
     \Gamma \vdash \ttt{(\textbf{do} \{ x <- c; rest \}) :: Cmd $\alpha$}
+  }\\
+  \inference{%
+    \Gamma \vdash \ttt{c :: Cmd (Expr $\sigma$ $\tau$)}
+    \\ \Gamma \vdash \ttt{rest :: Cmd $\alpha$}
+  }{%
+    \Gamma \vdash \ttt{(\textbf{do} \{ c; rest \}) :: Cmd $\alpha$}
   }
 \end{gather*}
 \end{minipage}}
