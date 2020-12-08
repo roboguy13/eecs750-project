@@ -536,6 +536,58 @@ of the output and prevent it from being too overwhelming to the programmer.
 \label{fig:Analysis5}
 \end{figure}
 
+\begin{figure}
+\begin{lstlisting}[language=Haskell]
+analyze(forest, scope, return x) = forest
+analyze(forest, scope, (do { n <- allocPublic @ty size; r n })) = do
+  scope.insert(Public, n)
+  analyze(forest, scope, r(n))
+
+analyze(forest, scope, (do { n <- allocSecret @ty size; r n })) = do
+  scope.insert(Secret, n)
+  analyze(forest, scope, r(n))
+
+analyze(forest, scope, (do { n <- decl x; r n })) = do
+  scope.insert(Public, n)
+  analyze(forest, scope, r(n))
+
+analyze(forest, scope, (do { x .= y; r })) = do
+  let lhsNames = collectExprNames(x)
+  let rhsNames = collectExprNames(y)
+
+  foreach rhsName in rhsNames
+    if (rhsName is secret)
+      forest.addChildrenTo(rhsName, lhsNames)
+    end
+  end
+
+  foreach lhsName in lhsNames
+    let scopeFrame = scope.getScopeFrameOf(lhsName)
+
+    if scope.notCurrentScopeFrame(scopeFrame)
+      forest.addChildrenTo(lhsName, scopeFrame.secretVariables)
+    end
+  end
+
+  analyze(forest, scope, r)
+
+analyze(forest, scope, (do { ifThenElse cond t f; r })) = do
+  let secretNames = filter(isSecretName, collectExprNames(cond))
+
+  let tForest = copy(forest)
+  let fForest = copy(forest)
+  let tScope = copy(scope)
+  let fScope = copy(scope)
+
+  analyze(tForest, tScope.pushFrame(secretNames), r)
+  analyze(fForest, fScope.pushFrame(secretNames), r)
+
+  forest = union(tForest, fForest)
+  analyze(forest, scope, r)
+\end{lstlisting}
+\caption{Information leak analysis pseudocode}
+\end{figure}
+
 
 % \begin{figure}[h]
 %   \centering
