@@ -88,8 +88,6 @@
 \newcommand{\rarr}{\rightarrow}
 \newcommand{\sarr}{\leadsto}
 
-% \addtolength{\jot}{3mm}
-
 %-------------------------------------------------------------------------
 \begin{document}
 
@@ -117,7 +115,31 @@ University of Kansas, USA\\
 %-------------------------------------------------------------------------
 
 \section{Introduction}
-Introduction goes here.
+SpectreGuard is provides an abstraction that allows programmers to prevent
+speculative access of certain variables.~\cite{SpectreGuard} For
+preserving program correctness, static analyses are desirable to prevent
+programmers from accidentally successfully compiling code which copies a
+``secret'' variable (a variable protected by SpectreGuard) to a ``public''
+variable (a variable with no such protection).
+
+To this end, two interrelated static analysis techniques are designed and
+implemented. In this paper, we make the following contributions:
+
+\begin{itemize}
+\item We describe a small domain specific language embedded in Haskell for representing
+  simple C programs (Section~\ref{sec:Syntax}).
+\item A code generator which generates C code from this EDSL is outlined
+  (Section~\ref{sec:Syntax}).
+\item We give a system of types which causes the expression language of this
+  EDSL to be statically checked for variable copies that directly leak memory
+  from secret variables to public variables (Section~\ref{sec:SensTypes}).
+\item Another static analysis procedure is given which can find \textit{indirect}
+  leak paths through control structures (Section~\ref{sec:Analysis}). This analysis
+  procedure can be applied to EDSL code in the same way as the code generator
+  can be applied to EDSL code. The results from this analysis take the form
+  of a forest of multiway trees, providing information about these possible
+  indirect leaks.
+\end{itemize}
 
 \section{Background}
 Cite a paper. % \cite{barroso2009datacenter}.
@@ -125,6 +147,7 @@ Cite a paper. % \cite{barroso2009datacenter}.
 Cite multiple papers. % \cite{banga99resourcecontainers,barroso2009datacenter}
 
 \section{Syntax}
+\label{sec:Syntax}
 A correspondence between the syntax of the EDSL, which is inherited from
 Haskell, and the C language is given in Fig. \ref{fig:Syntax}. In the right column, an
 overline indicates that the transformation from EDSL to C is recursively
@@ -562,138 +585,6 @@ the stack frame in which the left-hand side name occured.
 At the end of the algorithm, only leaves corresponding to public names are
 retained.
 
-
-% \begin{figure}
-% \begin{lstlisting}[language=Haskell]
-% analyze(forest, scope, return x) = forest
-% analyze(forest, scope, (do { n <- allocPublic @ty size; r n })) = do
-%   scope.insert(Public, n)
-%   analyze(forest, scope, r(n))
-
-% analyze(forest, scope, (do { n <- allocSecret @ty size; r n })) = do
-%   scope.insert(Secret, n)
-%   analyze(forest, scope, r(n))
-
-% analyze(forest, scope, (do { n <- decl x; r n })) = do
-%   scope.insert(Public, n)
-%   analyze(forest, scope, r(n))
-
-% analyze(forest, scope, (do { x .= y; r })) = do
-%   let lhsNames = collectExprNames(x)
-%   let rhsNames = collectExprNames(y)
-
-%   foreach rhsName in rhsNames
-%     if (rhsName is secret)
-%       forest.addChildrenTo(rhsName, lhsNames)
-%     end
-%   end
-
-%   foreach lhsName in lhsNames
-%     let scopeFrame = scope.getScopeFrameOf(lhsName)
-
-%     if scope.notCurrentScopeFrame(scopeFrame)
-%       forest.addChildrenTo(lhsName, scopeFrame.secretVariables)
-%     end
-%   end
-
-%   analyze(forest, scope, r)
-
-% analyze(forest, scope, (do { ifThenElse cond t f; r })) = do
-%   let secretNames = filter(isSecretName, collectExprNames(cond))
-
-%   let tForest = copy(forest)
-%   let fForest = copy(forest)
-%   let tScope = copy(scope)
-%   let fScope = copy(scope)
-
-%   analyze(tForest, tScope.pushFrame(secretNames), r)
-%   analyze(fForest, fScope.pushFrame(secretNames), r)
-
-%   forest = union(tForest, fForest)
-%   analyze(forest, scope, r)
-% \end{lstlisting}
-% \caption{Information leak analysis pseudocode}
-% \end{figure}
-
-
-% \begin{figure}[h]
-%   \centering
-% \resizebox{0.68\linewidth}{!}{
-% \begin{minipage}{\linewidth}
-%   \centering
-% \begin{gather*}
-%   \inference{%
-%     \Delta;\Gamma \vdash \ttt{x :: $\tau$}
-%     \\ \Delta;\Gamma \vdash \ttt{k :: Expr Public $\tau$ $\rarr$ Cmd $\alpha$}
-%     \\ \Delta;\Gamma\vdash A(\ttt{decl v >>= ($\lambda$x $\rarr$ k)})
-%     }
-%     {%
-%       \Delta,Pub(x);\Gamma \vdash A(\ttt{k})
-%     }\\
-%     \\
-%   \inference{%
-%     \Delta;\Gamma \vdash \ttt{x :: Expr Public $\tau$}
-%     & \Delta;\Gamma \vdash \ttt{y :: Expr Public $\tau$}
-%     \\ \Delta;\Gamma \vdash \ttt{k :: () $\rarr$ Cmd $\alpha$}
-%     & \Delta;\Gamma \vdash A(\ttt{(x .= y) >>= k})
-%     \\ \Delta;\Gamma \vdash L(\ttt{x}) \neq \varnothing
-%     }
-%     {%
-%       \Delta;\Gamma \vdash \ttt{x} \sarr L(\ttt{x})
-%     }\\
-%   \\
-%   \inference{%
-%     \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
-%     & \Delta;\Gamma \vdash \ttt{body :: Cmd $\alpha$}
-%     \\ \Delta;\Gamma \vdash A(\ttt{while cond body})
-%     & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
-%     \\ \Delta;\Gamma \vdash Pub(\ttt{x})
-%     }
-%     {%
-%       \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{body})
-%     }\\
-%   \\
-%   \inference{%
-%     \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
-%     \\ \Delta;\Gamma \vdash \ttt{t :: Cmd $\alpha$}
-%     & \Delta;\Gamma \vdash \ttt{f :: Cmd $\alpha$}
-%     \\ \Delta;\Gamma \vdash A(\ttt{if cond t f})
-%     & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
-%     \\ \Delta;\Gamma \vdash Pub(\ttt{x})
-%     }
-%     {%
-%       \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{t})
-%     }\\
-%   \\
-%   \inference{%
-%     \Delta;\Gamma \vdash \ttt{cond :: Expr Bool}
-%     \\ \Delta;\Gamma \vdash \ttt{t :: Cmd $\alpha$}
-%     & \Delta;\Gamma \vdash \ttt{f :: Cmd $\alpha$}
-%     \\ \Delta;\Gamma \vdash A(\ttt{if cond t f})
-%     & \Delta;\Gamma \vdash s \in Secrets(\ttt{cond})
-%     \\ \Delta;\Gamma \vdash Pub(\ttt{x})
-%     }
-%     {%
-%       \Delta, s \in L(\ttt{x});\Gamma \vdash A(\ttt{f})
-%     }\\
-%   \\
-%   \inference{%
-%     \Delta;\Gamma \vdash v \in L(\ttt{x})
-%     }
-%     {%
-%       \Delta;\Gamma \vdash L(\ttt{x}) \neq \varnothing
-%     }
-% \end{gather*}
-% \end{minipage}}
-%   \caption{Information flow analysis rules which define the relation $\sarr$}
-% \label{fig:FlowRules}
-% \end{figure}
-...
-
-% \section{Your System}
-% ...
-% \section{Evaluation}
-% ...
 
 \section{Related Work}
 ...
