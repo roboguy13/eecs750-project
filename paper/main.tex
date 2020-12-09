@@ -317,7 +317,7 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
     {\Gamma \vdash \ttt{x .= y :: Cmd ()}}\\
   \inference{%
     \Gamma \vdash \ttt{cond :: Expr $\sigma$ Bool}
-    &\Gamma \vdash \ttt{t :: Cmd $\alpha$}
+    \\ \Gamma \vdash \ttt{t :: Cmd $\alpha$}
     &\Gamma \vdash \ttt{f :: Cmd $\alpha$}}
     {\Gamma \vdash \ttt{ifThenElse cond t f :: Cmd ()}}\\
   \inference{%
@@ -536,57 +536,84 @@ of the output and prevent it from being too overwhelming to the programmer.
 \label{fig:Analysis5}
 \end{figure}
 
-\begin{figure}
-\begin{lstlisting}[language=Haskell]
-analyze(forest, scope, return x) = forest
-analyze(forest, scope, (do { n <- allocPublic @ty size; r n })) = do
-  scope.insert(Public, n)
-  analyze(forest, scope, r(n))
+The implementation of the analysis tool is built around two primary data
+structures:
 
-analyze(forest, scope, (do { n <- allocSecret @ty size; r n })) = do
-  scope.insert(Secret, n)
-  analyze(forest, scope, r(n))
+\begin{itemize}
+  \item
+    A forest of multi-way trees (these are also called ``rose
+trees''~\cite{LooplessBird}) which represents the leak paths
+  \item
+    A stack of name associations (a ``scope stack''). Each entry in the stack is
+    a pair consisting of two lists of names. The first list contains all of the
+    names that are in the current scope: the ``in-scope list''. When a
+    conditional construct is entered, all of the secret variables in the
+    conditional will be put into the second list and a new pair of empty lists
+    will be pushed onto the stack. This second list is the ``secret list''
+\end{itemize}
 
-analyze(forest, scope, (do { n <- decl x; r n })) = do
-  scope.insert(Public, n)
-  analyze(forest, scope, r(n))
+When a declaration is encountered, this name is added to the current ``scope
+frame'' in the scope stack. Whenever an assignment is encountered, all of the
+names in the left-hand side which are contained in the in-scope list of any
+scope frame \textit{before} the current one are added as children (in the rose
+tree forest) of all of nodes corresponding to the names in the secret list of
+the stack frame in which the left-hand side name occured.
 
-analyze(forest, scope, (do { x .= y; r })) = do
-  let lhsNames = collectExprNames(x)
-  let rhsNames = collectExprNames(y)
+At the end of the algorithm, only leaves corresponding to public names are
+retained.
 
-  foreach rhsName in rhsNames
-    if (rhsName is secret)
-      forest.addChildrenTo(rhsName, lhsNames)
-    end
-  end
 
-  foreach lhsName in lhsNames
-    let scopeFrame = scope.getScopeFrameOf(lhsName)
+% \begin{figure}
+% \begin{lstlisting}[language=Haskell]
+% analyze(forest, scope, return x) = forest
+% analyze(forest, scope, (do { n <- allocPublic @ty size; r n })) = do
+%   scope.insert(Public, n)
+%   analyze(forest, scope, r(n))
 
-    if scope.notCurrentScopeFrame(scopeFrame)
-      forest.addChildrenTo(lhsName, scopeFrame.secretVariables)
-    end
-  end
+% analyze(forest, scope, (do { n <- allocSecret @ty size; r n })) = do
+%   scope.insert(Secret, n)
+%   analyze(forest, scope, r(n))
 
-  analyze(forest, scope, r)
+% analyze(forest, scope, (do { n <- decl x; r n })) = do
+%   scope.insert(Public, n)
+%   analyze(forest, scope, r(n))
 
-analyze(forest, scope, (do { ifThenElse cond t f; r })) = do
-  let secretNames = filter(isSecretName, collectExprNames(cond))
+% analyze(forest, scope, (do { x .= y; r })) = do
+%   let lhsNames = collectExprNames(x)
+%   let rhsNames = collectExprNames(y)
 
-  let tForest = copy(forest)
-  let fForest = copy(forest)
-  let tScope = copy(scope)
-  let fScope = copy(scope)
+%   foreach rhsName in rhsNames
+%     if (rhsName is secret)
+%       forest.addChildrenTo(rhsName, lhsNames)
+%     end
+%   end
 
-  analyze(tForest, tScope.pushFrame(secretNames), r)
-  analyze(fForest, fScope.pushFrame(secretNames), r)
+%   foreach lhsName in lhsNames
+%     let scopeFrame = scope.getScopeFrameOf(lhsName)
 
-  forest = union(tForest, fForest)
-  analyze(forest, scope, r)
-\end{lstlisting}
-\caption{Information leak analysis pseudocode}
-\end{figure}
+%     if scope.notCurrentScopeFrame(scopeFrame)
+%       forest.addChildrenTo(lhsName, scopeFrame.secretVariables)
+%     end
+%   end
+
+%   analyze(forest, scope, r)
+
+% analyze(forest, scope, (do { ifThenElse cond t f; r })) = do
+%   let secretNames = filter(isSecretName, collectExprNames(cond))
+
+%   let tForest = copy(forest)
+%   let fForest = copy(forest)
+%   let tScope = copy(scope)
+%   let fScope = copy(scope)
+
+%   analyze(tForest, tScope.pushFrame(secretNames), r)
+%   analyze(fForest, fScope.pushFrame(secretNames), r)
+
+%   forest = union(tForest, fForest)
+%   analyze(forest, scope, r)
+% \end{lstlisting}
+% \caption{Information leak analysis pseudocode}
+% \end{figure}
 
 
 % \begin{figure}[h]
