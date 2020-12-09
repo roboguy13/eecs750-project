@@ -120,10 +120,10 @@ speculative access of certain variables.~\cite{SpectreGuard} For
 preserving program correctness, static analyses are desirable to prevent
 programmers from accidentally successfully compiling code which copies a
 ``secret'' variable (a variable protected by SpectreGuard) to a ``public''
-variable (a variable with no such protection).
+variable (a variable with no such protection). To this end, two interrelated static analysis techniques are designed and
+implemented.
 
-To this end, two interrelated static analysis techniques are designed and
-implemented. In this paper, we make the following contributions:
+In this paper, we make the following contributions:
 
 \begin{itemize}
 \item We describe a small domain specific language embedded in Haskell for representing
@@ -139,6 +139,8 @@ implemented. In this paper, we make the following contributions:
   can be applied to EDSL code. The results from this analysis take the form
   of a forest of multiway trees, providing information about these possible
   indirect leaks.
+\item We provide several examples and describe how the system handles them
+  (Section~\ref{sec:Examples}).
 \end{itemize}
 
 \section{Background}
@@ -588,7 +590,16 @@ retained.
 
 
 \section{Related Work}
-...
+The way that the type-level tagging mechanism works is similar to several other
+prior works. One such work is McBride's "Kleisli Arrows of Outrageous Fortune"~\cite{KleisliArrows}. In that paper, an invalid state is unable to be reached as the result of
+a similar type-level tag as the \ttt{Sensitivity} tag in the present paper.
+However, significantly more machinery is involved in the McBride paper, as
+it is necessary to put such a tag on a monadic type. While a monadic type is
+used in the present paper (in the form of the \ttt{Cmd} type), this type
+does not use a type-level tag. The creation of such machinery is the
+main purpose of the McBride paper.
+
+
 
 \section{Future Work}
 A further investigation into the tradeoffs and possible additional features of
@@ -596,9 +607,13 @@ the information flow analysis is likely to be useful. This could provide a more
 accurate and succinct picture to programmers of where leaks are occurring, or
 potentially occurring. It is possible that some of these other leak conditions
 could be incorporated into the type system, by exploiting the dependent type
-features enabled by singletons~\cite{SingletonsPaper} and, in the future, by Dependent Haskell.~\cite{DepHaskSpec}
-Dependent types provide a powerful technique for writing programs at a type-level, which
-will be executed at compile-time by the type checker.~\cite{CertProg, DepHaskSpec}
+features enabled by singletons~\cite{SingletonsPaper} and, in the future, by
+Dependent Haskell.~\cite{DepHaskSpec} Dependent types provide a powerful
+technique for writing programs at a type-level, which will be executed at
+compile-time by the type checker.~\cite{CertProg, DepHaskSpec} A more
+lightweight technique, which might be able to be applied to allow for more
+expressive policies to control of information flow within the type system, would
+be the ``ghosts of departed proofs'' design technique.~\cite{DepartedProofs}
 
 Additionally, features to safely convert between sensitivity levels could prove
 useful. A conversion from public to secret would be straightforward. A situational conversion
@@ -620,7 +635,18 @@ regular Haskell code within the EDSL. For example, a loop can be explicitly unro
 at the same time preserving the brevity of using a loop.
 
 \section{Conclusion}
-...
+
+Building upon the SpectreGuard work~\cite{SpectreGuard}, we have constructed
+a system which allows the programmer greater assurance that the SpectreGuard
+mechanism will not be accidentally circumvented due to certain forms of
+leaks from secret variables to public variables. This analysis checks for
+both direct copies from a secret variable to a public variable, as well as
+a certain class of leaks where control flow depends on a secret variable.
+
+SpectreGuard is a powerful tool for protecting code against Spectre attacks and,
+in the present work, we have given tools which provide additional guarantees
+that this tool will function as intended.
+
 %-------------------------------------------------------------------------
 
 \bibliographystyle{plain}

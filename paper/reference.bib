@@ -147,3 +147,29 @@ isbn="978-3-540-35632-5"
 }
 
 
+
+@article{DepartedProofs,
+author = {Noonan, Matt},
+title = {Ghosts of Departed Proofs (Functional Pearl)},
+year = {2018},
+issue_date = {July 2018},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {53},
+number = {7},
+issn = {0362-1340},
+url = {https://doi.org/10.1145/3299711.3242755},
+doi = {10.1145/3299711.3242755},
+abstract = {Library authors often are faced with a design choice: should a function with preconditions be implemented as a partial function, or by returning a failure condition on incorrect use? Neither option is ideal. Partial functions lead to frustrating run-time errors. Failure conditions must be checked at the use-site, placing an unfair tax on the users who have ensured that the function's preconditions were correctly met.  In this paper, we introduce an API design concept called ``ghosts of departed proofs'' based on the following observation: sophisticated preconditions can be encoded in Haskell's type system with no run-time overhead, by using proofs that inhabit phantom type parameters attached to newtype wrappers. The user expresses correctness arguments by constructing proofs to inhabit these phantom types. Critically, this technique allows the library user to decide when and how to validate that the API's preconditions are met.  The ``ghosts of departed proofs'' approach to API design can achieve many of the benefits of dependent types and refinement types, yet only requires some minor and well-understood extensions to Haskell 2010. We demonstrate the utility of this approach through a series of case studies, showing how to enforce novel invariants for lists, maps, graphs, shared memory regions, and more.},
+journal = {SIGPLAN Not.},
+month = sep,
+pages = {119–131},
+numpages = {13},
+keywords = {software engineering, API design, higher-rank types, formal methods}
+}
+
+@MISC{KleisliArrows,
+    author = {Conor McBride},
+    title = {Kleisli arrows of outrageous fortune},
+    year = {2011}
+}
