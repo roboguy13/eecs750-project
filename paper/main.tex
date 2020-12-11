@@ -101,11 +101,11 @@ University of Kansas, USA\\
 \thispagestyle{empty}
 \begin{abstract}
 
-  A Spectre mitigation strategy in the form of a mechanism for marking variables
+  A Spectre mitigation strategy which allows variables to be marked
   as ``non-speculative'' was developed in the form of \textit{SpectreGuard}\cite{SpectreGuard}. In this paper, we
   develop an embedded domain specific language (EDSL) in Haskell to provide
   support for this feature, with a backend that generates C code. The static
-  type system of Haskell is used so that many basic forms of copying secret
+  type system of Haskell is used so that basic forms of copying secret
   variables to public variables are disallowed. Additionally, a static analysis
   was developed which will detect some cases of secret variables leaking to
   public variables via control flow constructs.
@@ -116,15 +116,16 @@ University of Kansas, USA\\
 
 \section{Introduction}
 \label{sec:Introduction}
-SpectreGuard is provides an abstraction that allows programmers to prevent
+SpectreGuard provides an abstraction that allows programmers to prevent
 speculative access of certain variables~\cite{SpectreGuard}. As Spectre-based
 attacks remain an issue, even in modern computer systems, such mitigations and
 preventative measures are crucial to maintaining the security of software.  For
-preserving program correctness, static analyses are desirable to prevent
-programmers from accidentally successfully compiling code which copies a
+preserving program correctness with respect to SpectreGuard annotations, static analyses are desirable to prevent
+programmers from accidentally compiling code which copies a
 ``secret'' variable (a variable protected by SpectreGuard) to a ``public''
 variable (a variable with no such protection). To this end, two interrelated
-static analysis techniques are designed and implemented.
+static analysis techniques are designed and implemented: one within the Haskell type system and
+one outside the type system.
 
 In this paper, we make the following contributions:
 
@@ -140,7 +141,7 @@ In this paper, we make the following contributions:
   leak paths through control structures (Section~\ref{sec:Analysis}). This analysis
   procedure can be applied to EDSL code in the same way as the code generator
   can be applied to EDSL code. The results from this analysis take the form
-  of a forest of multiway trees, providing information about these possible
+  of a forest of multiway trees, providing information to the programmer about these possible
   indirect leaks.
 \item We provide several examples and describe how the system handles them
   (Section~\ref{sec:Examples}).
@@ -148,22 +149,22 @@ In this paper, we make the following contributions:
 
 \section{Background}
 
-Haskell is a purely functional programming language with strong static type
+Haskell is a purely functional programming language with a strong static type
 system based on System F and algebraic datatypes (ADTs)~\cite{HistoryOfHaskell}.
 These features, particularly the type system, the algebraic datatypes and its
 support for higher-order functions, make it a powerful tool for the creation of
 EDSLs. Expressions, commands and programs (compound commands) can be
-straightforwardly expressed using ADTs using a \textit{deep
+straightforwardly expressed using ADTs to construct a \textit{deep
 embedding}~\cite{DeepAndShallow}.
 
-A deep embedding directly exposes its abstract syntax tree (AST) as a value.
-This allows EDSL programs to be easily manipulated and examined, such as for
+A deep embedding of an EDSL directly exposes its abstract syntax tree (AST) as a value.
+This allows EDSL programs to be easily manipulated and examined, such as for the purposes of
 interpretation, code generation and static analysis (the latter two we make use
 of in this paper).
 
 \section{Syntax}
 \label{sec:Syntax}
-A correspondence between the syntax of the EDSL, which is inherited from
+A correspondence between the syntax of the EDSL, which is in part inherited from
 Haskell, and the C language is given in Fig. \ref{fig:Syntax}. In the right column, an
 overline indicates that the transformation from EDSL to C is recursively
 performed to the expression or command underneath the overline.
@@ -175,17 +176,17 @@ variable convention; see Chapter 2 in~\cite{BarendregtConversion}). This
 annotated AST can be used by both the code generator and the information flow
 leak analysis tool (the latter is described in Section \ref{sec:Analysis}). The
 code generator performs a transformation from code in the syntax given in the
-left column of Fig.~\ref{fig:Syntax} to the right column of the figure. This is
+left column of Fig.~\ref{fig:Syntax} to the syntax in the right column of that figure. This
 transformation recursively applies itself when it reaches the parts marked with
 an overline in the right column of the figure. It is worth noting that, as a
-result of this technique, the names in the generated C code will not generally
+result of the name generation technique used, the names in the generated C code will not generally
 be the same as the names in the EDSL code.
 
 The one major aspect of the C code generator that is not described in this table
 is how the loop variable in \ttt{for} loops can be tagged as secret (if appropriate).
-This is accomplished by recovering the type-level sensitivity type information at
+This is accomplished by recovering the type-level sensitivity information at
 runtime. Such a recovery is made possible by the use of singletons~\cite{Singletons}.
-\ttt{for} loops provide a particular example of where Haskell's support for higher-order function
+\ttt{for} loops provide a particular example of where Haskell's support for higher-order functions
 can be used inside an EDSL to implement commands that involve the creation of
 new variables.
 
@@ -292,34 +293,34 @@ EDSL syntax are given in Section \ref{sec:Examples}.
 \section{Sensitivity Types}
 \label{sec:SensTypes}
 The Haskell type system is leveraged to perform a basic static consistency check
-of the sensitivities of variables, so that a variable does not get assigned to a
+of the sensitivities of variables, so that the contents of a variable does not get assigned to a
 variable of a different sensitivity. This is done by making the \verb|Expr| type
-constructor take a phantom type argument~\cite{Phantom}. The phantom type
-argument is the \textit{sensitivity type} of that expression.  The logical
+constructor take a phantom type argument~\cite{Phantom} representing the sensitivity level. The phantom type
+argument is the \textit{sensitivity level} of that expression.  The logical
 inference rules corresponding to this check are given in Fig.
 \ref{fig:SensTypes}. Note that the EDSL inherits the rest of Haskell's type
-system in addition to these rules. Only the aspects of the type system that is
-particularly relevant to the EDSL is reflected in the figure, often specialized
-to the particular scenario encountered in using sensitivity types in the EDSL.
+system in addition to these rules. Only the aspects of the type system that are
+particularly relevant to the EDSL are reflected in the figure, often specialized
+to the particular scenario encountered in using sensitivity levels in the EDSL.
 An introduction to this style of inference rule system, with many examples and
 applications in the study of programming languages, is given in
 \cite{HarperFoundations}.
 
-Observe that an two expressions with different sensitivity types cannot be
+Observe that an two expressions with different sensitivity levels cannot be
 combined into a larger compound expression. However, commands (represented by
 the \verb|Cmd| type constructor) often have expressions embedded in them and
 commands can be sequenced with each other.  There is no restriction on how two
 commands can be combined, even if they involve expressions with different
-sensitivity types. This freedom in combining commands independently of
+sensitivity levels. This freedom in combining commands independently of
 sensitivity foreshadows the essence of the problem we will encounter in
 Section \ref{sec:Analysis}. For now, note that all control flow constructs are
-part of the command type (as opposed to the expression type).
+part of the command type, as opposed to the expression type.
 
-Singletons~\cite{Singletons} are used to preserve this type level at runtime, so that the
+Singletons~\cite{Singletons} are used to preserve this type level information about sensitivities at runtime, so that the
 code generator can generate SpectreGuard annotations where appropriate. These annotations can
 then be used by the SpectreGuard mitigation system~\cite{SpectreGuard}.
 
-In Fig. \ref{fig:SensTypes}, it is assumed that $\tau$ and $\sigma$ are given by the
+In Fig. \ref{fig:SensTypes}, it is assumed that $\tau$ and $\sigma$ are metavariables given by the
 following grammar:
 \begin{gather*}
   \sigma ::= \ttt{Public}\;|\;\ttt{Secret}\\
@@ -395,14 +396,14 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
   }
 \end{gather*}
 \end{minipage}}
-  \caption{Typing rules for sensitivity types}
+  \caption{Typing rules for sensitivity levels}
 \label{fig:SensTypes}
 \end{figure}
 
 \section{Examples}
 \label{sec:Examples}
 
-A couple of simple examples illustrate the basic typing rules:
+We now give a couple of simple examples illustrate the basic typing rules.
 
 \begin{lstlisting}[language=haskell]
 example1 :: Cmd ()
@@ -417,6 +418,7 @@ is being performed from one secret array to another secret array.
 
 The next example does not type check:
 
+\pagebreak
 \begin{lstlisting}[language=haskell]
   -- This example fails to type check
 example2 :: Cmd ()
@@ -427,8 +429,8 @@ example2 = do
 \end{lstlisting}
 
 \noindent \ttt{example2} fails to type check since \ttt{array1} and \ttt{array2} have
-different sensitivity annotations, while the type of the \ttt{(.=)} operation
-requires that both arguments have the same sensitivity annotation. This restriction can
+different sensitivity levels, while the type of the \ttt{(.=)} operation
+requires that both arguments have the same sensitivity level. This restriction can
 be seen in the typing rule for \ttt{(.=)} in Fig. \ref{fig:SensTypes}.
 
 Turning to more complex examples, we can see that the following example type checks
@@ -446,7 +448,7 @@ example3 = do
 only copies happen between two variables with the same sensitivity level, so this
 program is well-typed.
 
-The next slightly more complex example exhibits an important limitation of this sensitivity type checking:
+The next slightly more complex example exhibits an important limitation of this sensitivity level checking:
 
 \begin{lstlisting}[language=Haskell]
 example4 :: Cmd ()
@@ -466,7 +468,8 @@ example4 = do
 to the public variable \ttt{publicArray}. The leak occurs despite the fact that the two variables have different
 sensitivity annotations. This is the
 result of information being indirectly leaked from the secret variable to the
-public variable via a control flow construct: in this case, the innermost \ttt{for} loop. Such an example has been studied from programming language perspective before; for instance
+public variable via a control flow construct: in this case, the innermost \ttt{for} loop. Such an example has been studied from programming language perspective in the
+context of computer security before, for instance
 in~\cite{InfoFlowAnalysis}.
 
 This kind of leak directly motivates the analysis in Section \ref{sec:Analysis}. This analysis will perform
@@ -475,7 +478,7 @@ some level of checking beyond the relatively basic sensitivity type check descri
 \section{Information Flow Analysis}
 \label{sec:Analysis}
 
-In Section \ref{sec:Examples}, a significant limitation of the sensitivity type checking
+In Section \ref{sec:Examples}, a significant limitation of the sensitivity level type checking
 was outlined. In this section we address this limitation using a static analysis technique.
 Possible leaks from secret variables to public variables via control flow constructs will
 be analyzed and the results of this analysis will be described in the form of
@@ -614,7 +617,7 @@ the stack frame in which the left-hand side name occured.
 An alternate way to view the scope stack is as a stack of \textit{relations} on
 on names. Each item of the stack is a relation such that two names are related
 if and only if the left-hand name is a public variable declared in the corresponding
-scope and the right-hand name is a secret variable in a conditional within the scope.
+scope and the right-hand name is a secret variable in a conditional immediately within the scope.
 
 This allows us to look for leaks that happen ``through'' a control construct.
 
@@ -633,7 +636,7 @@ publicNonLocals :: Scope -> Name -> Maybe [Name]
 program as follows:
 
 Whenever a declaration is encountered in EDSL code, the corresponding variable
-name is added to the scope stack with \ttt{scopeAddName}. Whenever a control
+name is added to the scope stack frame with \ttt{scopeAddName}. Whenever a control
 structure is entered (such as a \ttt{for} loop or an \ttt{if} statement),
 \ttt{scopePush} is called with a list of all secret variables (if any) in the
 condition of that control structure. When an assignment is encountered, it
@@ -671,15 +674,15 @@ al.~\cite{Lifty} As its title suggests, this paper also builds on the theory of 
 developed which has a static type system that is geared specifically towards
 expressing security policies at a type level. As this is done within a static
 type system, these invariants are machine-verified at compile-time.  Not only
-can these policy violations be detected, the system they develop is also able to
-fix leaks.
+can policy violations be detected and reported, the system they develop is also able to
+fix leaks automatically.
 
 More broadly, an example of a language being represented similarly, as an
 pure expression language separated from a command language, can be found in
-Winskel's 1993 book in the form of the \textbf{IMP} language.~\cite{WinskelBook} This
+Winskel's 1993 book in the form of the \textbf{IMP} language. This
 book provides an in-depth look at the three major mathematical formalizations
 of programming language semantics (axiomatic semantics, operational semantics and
-denotational semantics) and uses them to analyze \textbf{IMP}.
+denotational semantics) and uses them to analyze \textbf{IMP}.~\cite{WinskelBook}
 
 
 \section{Future Work}
@@ -695,11 +698,16 @@ technique for writing programs at a type-level, which will be executed at
 compile-time by the type checker~\cite{CertProg, DepHaskSpec}. A more
 lightweight technique, which might be able to be applied to allow for more
 expressive policies to control of information flow within the type system, would
-be the ``ghosts of departed proofs'' design technique~\cite{DepartedProofs}.
+be the ``ghosts of departed proofs'' design technique~\cite{DepartedProofs}. Another
+way to expand the expressiveness of the type system is through the use of \textit{refinement
+types}~\cite{RefinementTypes}, which have a Haskell implementation in the form of Liquid Haskell~\cite{LiquidHaskell}.
+Refinement types allow types which are given by restricting existing types using a predicate that
+the values of the type must satisfy. The predicate is written as a statement in
+a decidable logical framework.
 
 Another possible, related, future development would be the to attempt to add a
 mechanism which automatically fixes some (or all) leaks. Such a system has precendent
-in the previously mentioned paper \textit{Liquid Information Flow Control}~\cite{Lifty}.
+in the previously mentioned paper \textit{Liquid Information Flow Control}. This work uses refinement types, of the sort mentioned previously.~\cite{Lifty}
 This could give programmers an additional tool towards ensuring correctness, with
 respect to SpectreGuard annotations.
 
@@ -733,10 +741,10 @@ regular Haskell code within the EDSL. For example, a loop can be explicitly unro
 at the same time preserving the brevity of using a loop.
 
 Other possible leak paths should also be investigated. While outside the scope of this paper,
-it there could be leaks which occur under circumstances other than direct copies or the indirect
+there could be leaks which occur under circumstances other than direct copies or the indirect
 leaks described in Section~\ref{sec:Analysis}. In future work, it would be useful to either
 classify more leak paths (and deal with them appropriately) or prove that, in fact, no such additional
-leak paths exist (at least, within a certain threat model).
+leak paths exist (within a certain threat model).
 
 A related topic would be enriching the theoretical background of the leak analysis tool. The theory of
 programming language semantics, particularly denotational semantics and operational semantics~\cite{WinskelBook}, as well
@@ -771,7 +779,7 @@ a system which allows the programmer greater assurance that the SpectreGuard
 mechanism will not be accidentally circumvented due to certain forms of
 leaks from secret variables to public variables. This analysis checks for
 both direct copies from a secret variable to a public variable, as well as
-a certain class of leaks where control flow depends on a secret variable.
+a certain class of leaks that can occur when control flow depends on a secret variable.
 
 SpectreGuard is a powerful mechanism for protecting code against Spectre attacks and,
 in the present work, we have given tools which provide additional guarantees
