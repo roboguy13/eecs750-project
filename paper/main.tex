@@ -464,7 +464,8 @@ example4 = do
 to the public variable \ttt{publicArray}. The leak occurs despite the fact that the two variables have different
 sensitivity annotations. This is the
 result of information being indirectly leaked from the secret variable to the
-public variable via a control flow construct: in this case, the innermost \ttt{for} loop.
+public variable via a control flow construct: in this case, the innermost \ttt{for} loop. Such an example has been studied from programming language perspective before; for instance
+in~\cite{InfoFlowAnalysis}.
 
 This kind of leak directly motivates the analysis in Section \ref{sec:Analysis}. This analysis will perform
 some level of checking beyond the relatively basic sensitivity type check described so far.
@@ -657,6 +658,10 @@ monadic type. While a monadic type is used in the present paper (in the form of
 the \ttt{Cmd} type), this type does not use a type-level tag. The creation of
 such machinery is the main purpose of the McBride paper.
 
+As mentioned previously, a theory of \textit{information flow} in the context of
+both computer security and programming languag theory has been developed. A description
+of this theory is given in~\cite{InfoFlowAnalysis}.
+
 A significant recent work also related to the use of domain specific languages
 with strong, static type systems to control information flow for security
 purposes is \textit{Liquid Information Flow Control} by Polikarpova et
@@ -666,6 +671,13 @@ expressing security policies at a type level. As this is done within a static
 type system, these invariants are machine-verified at compile-time.  Not only
 can these policy violations be detected, the system they develop is also able to
 fix leaks.
+
+More broadly, a similar example of a language being represented similarly, as an
+pure expression language separated from a command language, can be found in
+Winskel's 1993 book in the form of the \textbf{IMP} language.\cite{WinskelBook} This
+book provides an in-depth look at the three major mathematical formalizations
+of programming language semantics (axiomatic semantics, operational semantics and
+denotational semantics) and uses them to analyze \textbf{IMP}
 
 
 \section{Future Work}
@@ -717,6 +729,17 @@ type system (such as Haskell's). This would also lack the potential metaprogramm
 benefits of using an embedded DSL: creation of EDSL code can be automated using
 regular Haskell code within the EDSL. For example, a loop can be explicitly unrolled while
 at the same time preserving the brevity of using a loop.
+
+Other possible leak paths should also be investigated. While outside the scope of this paper,
+it there could be leaks which occur under circumstances other than direct copies or the indirect
+leaks described in Section~\ref{sec:Analysis}. In future work, it would be useful to either
+classify more leak paths (and deal with them appropriately) or prove that, in fact, no such additional
+leak paths exist (at least, within a certain threat model).
+
+A related topic would be enriching the theoretical background of the leak analysis tool. The theory of
+programming language semantics, particularly denotational semantics and operational semantics~\cite{WinskelBook}, as well
+as the theory of information flow~\cite{InfoFlowAnalysis}, would be particularly applicable here.
+
 
 \section{Conclusion}
 \label{sec:Conclusion}
