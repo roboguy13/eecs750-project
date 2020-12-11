@@ -148,11 +148,13 @@ In this paper, we make the following contributions:
 
 \section{Background}
 
-Haskell is a purely functional programming language with strong static type system
-based on System F and algebraic datatypes (ADTs).~\cite{HistoryOfHaskell} These features,
-particularly the type system and the algebraic datatypes, make it a powerful tool
-for the creation of EDSLs. Expressions, commands and programs (compound commands)
-can be straightforwardly expressed using ADTs using a \textit{deep embedding}.~\cite{DeepAndShallow}
+Haskell is a purely functional programming language with strong static type
+system based on System F and algebraic datatypes (ADTs).~\cite{HistoryOfHaskell}
+These features, particularly the type system, the algebraic datatypes and its
+support for higher-order functions, make it a powerful tool for the creation of
+EDSLs. Expressions, commands and programs (compound commands) can be
+straightforwardly expressed using ADTs using a \textit{deep
+embedding}.~\cite{DeepAndShallow}
 
 A deep embedding directly exposes its abstract syntax tree (AST) as a value.
 This allows EDSL programs to be easily manipulated and examined, such as for
@@ -169,14 +171,19 @@ performed to the expression or command underneath the overline.
 This also outlines procedure that the C code generator uses. When code written
 in the EDSL is transformed into C code, a name generator first annotates the
 abstract syntax tree (AST) with globally unique names (enforcing the Barendregt
-variable convention; see Chapter 2 in~\cite{BarendregtConversion}). This annotated AST can be used by both the code generator and the
-information flow leak analysis tool (the latter is described in Section
-\ref{sec:Analysis}).
+variable convention; see Chapter 2 in~\cite{BarendregtConversion}). This
+annotated AST can be used by both the code generator and the information flow
+leak analysis tool (the latter is described in Section \ref{sec:Analysis}). It
+is worth noting that, as a result of this technique, the names in the generated
+C code will not generally be the same as the names in the EDSL code.
 
 The one major aspect of the C code generator that is not described in this table
 is how the loop variable in \ttt{for} loops can be tagged as secret (if appropriate).
 This is accomplished by recovering the type-level sensitivity type information at
 runtime. Such a recovery is made possible by the use of singletons.~\cite{Singletons}
+\ttt{for} loops provide a particular example of where Haskell's support for higher-order function
+can be used inside an EDSL to implement commands that involve the creation of
+new variables.
 
 Code can be written in this EDSL by importing the EDSL's package in standard
 Haskell code and using the Glasgow Haskell Compiler (GHC) to compile the code.
@@ -304,7 +311,7 @@ sensitivity foreshadows the essence of the problem we will encounter in
 Section \ref{sec:Analysis}. For now, note that all control flow constructs are
 part of the command type (as opposed to the expression type).
 
-Singletons~\cite{SingletonsPaper} are used to preserve this type level at runtime, so that the
+Singletons~\cite{Singletons} are used to preserve this type level at runtime, so that the
 code generator can generate SpectreGuard annotations where appropriate. These annotations can
 then be used by the SpectreGuard mitigation system.~\cite{SpectreGuard}
 
@@ -619,7 +626,7 @@ scopePop :: Scope -> Scope
 publicNonLocals :: Scope -> Name -> Maybe [Name]
 \end{lstlisting}
 
-These operations are used by the tool in its analysis of an EDSL
+\noindent These operations are used by the tool in its analysis of an EDSL
 program as follows:
 
 Whenever a declaration is encountered in EDSL code, the corresponding variable
@@ -668,7 +675,7 @@ the information flow analysis is likely to be useful. This could provide a more
 accurate and succinct picture to programmers of where leaks are occurring, or
 potentially occurring. It is possible that some of these other leak conditions
 could be incorporated into the type system, by exploiting the dependent type
-features enabled by singletons~\cite{SingletonsPaper} and, in the future, by
+features enabled by singletons~\cite{Singletons} and, in the future, by
 Dependent Haskell.~\cite{DepHaskSpec} Dependent types provide a powerful
 technique for writing programs at a type-level, which will be executed at
 compile-time by the type checker.~\cite{CertProg, DepHaskSpec} A more
@@ -685,11 +692,21 @@ respect to SpectreGuard annotations.
 Additionally, features to safely convert between sensitivity levels could prove
 useful. A conversion from public to secret would be straightforward. A situational conversion
 going the other direction could be provided by an instruction in the EDSL
-which might perform a Spectre mitigation measure, such as a cache flush. \cite{PLtea-james}
+which might perform a Spectre mitigation measure, such as a cache flush.~\cite{PLtea-james}
 
 More primitive operations and support for a foreign function interface (FFI)
 with C would make the EDSL more practical. This would be straightforward to add,
-as the system already closely resembles C code and generates C code.
+as the system already closely resembles C code and generates C code. This could allow
+for better integration between code written in the EDSL and regular C code. One potential
+practical application of this is that the security-critical portion of a program
+can be written in this EDSL and the rest of the application can be written as a regular
+C program which interacts with the security-critical portion via an FFI going from C to
+the EDSL and an FFI going the other direction.
+
+Additional primitive operations added to the EDSL could include higher-level language features, such as higher-order
+functions, algebraic data types, pattern matching and tail recursion. An implementation path for
+these features is described in the upcoming paper \textit{On Adding Pattern Matching to Haskell-based Deeply Embedded Domain Specific Languages}, by
+David Young, Mark Grebe and Andy Gill.~\cite{PatMatchingEDSL}
 
 The sensitivity checking and the analysis tool could be added as an extension to
 a C compiler, via a plugin mechanism such as Clang's plugin system. This would
@@ -711,9 +728,9 @@ leaks from secret variables to public variables. This analysis checks for
 both direct copies from a secret variable to a public variable, as well as
 a certain class of leaks where control flow depends on a secret variable.
 
-SpectreGuard is a powerful tool for protecting code against Spectre attacks and,
+SpectreGuard is a powerful mechanism for protecting code against Spectre attacks and,
 in the present work, we have given tools which provide additional guarantees
-that this tool will function as intended.
+that this mechanism will function as intended.
 
 %-------------------------------------------------------------------------
 
