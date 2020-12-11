@@ -1,0 +1,9 @@
+digraph root {
+  subgraph 1 {
+    _fs_0 [shape=box];
+  }
+  subgraph 2 {
+    _fs_0 [shape=box];
+    _fs_0 -> _fs_3;
+  }
+}

@@ -9,3 +9,5 @@
 *.dot
 *.xml
 *.pf
+!paper/Diagrams
+!paper/Diagrams/*
