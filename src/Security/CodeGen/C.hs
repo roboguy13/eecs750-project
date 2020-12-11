@@ -9,6 +9,7 @@
 module Security.CodeGen.C
   where
 
+
 import           Security.Repr
 import           Security.Types
 import           Security.Sensitivity
@@ -270,7 +271,7 @@ example10 = do
 
   for (0 :: Expr Public Int) (\i -> ((i <? 8), (i += 1), do
 
-    leak <- decl (0 :: Int)
+    leak <- decl 0
 
     for (0 :: Expr Secret Int) (\j -> ((j <? (secretArray ! i)), (j += 1), do
       leak += 1
@@ -297,4 +298,11 @@ example10 = do
 
 example11 :: Cmd ()
 example11 = example8 >> example10
+
+example3_ :: Cmd ()
+example3_ = do
+  arr <- allocSecret @Int 8
+
+  for (0 :: Expr Secret Int) (\i -> (i <? 8, i += 1, do
+    (arr ! i) .= 7))
 

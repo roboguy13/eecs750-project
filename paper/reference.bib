@@ -173,3 +173,56 @@ keywords = {software engineering, API design, higher-rank types, formal methods}
     title = {Kleisli arrows of outrageous fortune},
     year = {2011}
 }
+
+@article{Lifty,
+author = {Polikarpova, Nadia and Stefan, Deian and Yang, Jean and Itzhaky, Shachar and Hance, Travis and Solar-Lezama, Armando},
+title = {Liquid Information Flow Control},
+year = {2020},
+issue_date = {August 2020},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {4},
+number = {ICFP},
+url = {https://doi.org/10.1145/3408987},
+doi = {10.1145/3408987},
+abstract = {We present Lifty, a domain-specific language for data-centric applications that manipulate sensitive data. A Lifty programmer annotates the sources of sensitive data with declarative security policies, and the language statically and automatically verifies that the application handles the data according to the policies. Moreover, if verification fails, Lifty suggests a provably correct repair, thereby easing the programmer burden of implementing policy enforcing code throughout the application.  The main insight behind Lifty is to encode information flow control using liquid types, an expressive yet decidable type system. Liquid types enable fully automatic checking of complex, data dependent policies, and power our repair mechanism via type-driven error localization and patch synthesis. Our experience using Lifty to implement three case studies from the literature shows that (1) the Lifty policy language is sufficiently expressive to specify many real-world policies, (2) the Lifty type checker is able to verify secure programs and find leaks in insecure programs quickly, and (3) even if the programmer leaves out all policy enforcing code, the Lifty repair engine is able to patch all leaks automatically within a reasonable time.},
+journal = {Proc. ACM Program. Lang.},
+month = aug,
+articleno = {105},
+numpages = {30},
+keywords = {program synthesis, liquid types, information flow control}
+}
+
+@inproceedings{HistoryOfHaskell,
+author = {Hudak, Paul and Hughes, John and Peyton Jones, Simon and Wadler, Philip},
+title = {A History of Haskell: Being Lazy with Class},
+year = {2007},
+isbn = {9781595937667},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1238844.1238856},
+doi = {10.1145/1238844.1238856},
+abstract = {This paper describes the history of Haskell, including its genesis and principles, technical contributions, implementations and tools, and applications and impact.},
+booktitle = {Proceedings of the Third ACM SIGPLAN Conference on History of Programming Languages},
+pages = {12–1–12–55},
+numpages = {55},
+location = {San Diego, California},
+series = {HOPL III}
+}
+
+@inproceedings{DeepAndShallow,
+author = {Svenningsson, Josef and Axelsson, Emil},
+title = {Combining Deep and Shallow Embedding for {EDSL}},
+year = {2012},
+isbn = {9783642404467},
+publisher = {Springer-Verlag},
+address = {Berlin, Heidelberg},
+url = {https://doi.org/10.1007/978-3-642-40447-4_2},
+doi = {10.1007/978-3-642-40447-4_2},
+abstract = {When compiling embedded languages it is natural to use an abstract syntax tree to represent programs. This is known as a deep embedding and it is a rather cumbersome technique compared to other forms of embedding, typically leading to more code and being harder to extend. In shallow embeddings, language constructs are mapped directly to their semantics which yields more flexible and succinct implementations. But shallow embeddings are not well-suited for compiling embedded languages. We present a technique to combine deep and shallow embedding in the context of compiling embedded languages in order to provide the benefits of both techniques. In particular it helps keeping the deep embedding small and it makes extending the embedded language much easier. Our technique also has some unexpected but welcome knock-on effects. It provides fusion of functions to remove intermediate results for free without any additional effort. It also helps to give the embedded language a more natural programming interface.},
+booktitle = {Proceedings of the 2012 Conference on Trends in Functional Programming - Volume 7829},
+pages = {21–36},
+numpages = {16},
+location = {St. Andrews, UK},
+series = {TFP 2012}
+}

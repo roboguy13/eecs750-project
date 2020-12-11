@@ -115,13 +115,16 @@ University of Kansas, USA\\
 %-------------------------------------------------------------------------
 
 \section{Introduction}
+\label{sec:Introduction}
 SpectreGuard is provides an abstraction that allows programmers to prevent
-speculative access of certain variables.~\cite{SpectreGuard} For
+speculative access of certain variables.~\cite{SpectreGuard} As Spectre-based
+attacks remain an issue, even in modern computer systems, such mitigations and
+preventative measures are crucial to maintaining the security of software.  For
 preserving program correctness, static analyses are desirable to prevent
 programmers from accidentally successfully compiling code which copies a
 ``secret'' variable (a variable protected by SpectreGuard) to a ``public''
-variable (a variable with no such protection). To this end, two interrelated static analysis techniques are designed and
-implemented.
+variable (a variable with no such protection). To this end, two interrelated
+static analysis techniques are designed and implemented.
 
 In this paper, we make the following contributions:
 
@@ -144,9 +147,17 @@ In this paper, we make the following contributions:
 \end{itemize}
 
 \section{Background}
-Cite a paper. % \cite{barroso2009datacenter}.
 
-Cite multiple papers. % \cite{banga99resourcecontainers,barroso2009datacenter}
+Haskell is a purely functional programming language with strong static type system
+based on System F and algebraic datatypes (ADTs).~\cite{HistoryOfHaskell} These features,
+particularly the type system and the algebraic datatypes, make it a powerful tool
+for the creation of EDSLs. Expressions, commands and programs (compound commands)
+can be straightforwardly expressed using ADTs using a \textit{deep embedding}.~\cite{DeepAndShallow}
+
+A deep embedding directly exposes its abstract syntax tree (AST) as a value.
+This allows EDSL programs to be easily manipulated and examined, such as for
+interpretation, code generation and static analysis (the latter two we make use
+of in this paper).
 
 \section{Syntax}
 \label{sec:Syntax}
@@ -161,6 +172,11 @@ abstract syntax tree (AST) with globally unique names (enforcing the Barendregt
 variable convention; see Chapter 2 in~\cite{BarendregtConversion}). This annotated AST can be used by both the code generator and the
 information flow leak analysis tool (the latter is described in Section
 \ref{sec:Analysis}).
+
+The one major aspect of the C code generator that is not described in this table
+is how the loop variable in \ttt{for} loops can be tagged as secret (if appropriate).
+This is accomplished by recovering the type-level sensitivity type information at
+runtime. Such a recovery is made possible by the use of singletons.~\cite{Singletons}
 
 Code can be written in this EDSL by importing the EDSL's package in standard
 Haskell code and using the Glasgow Haskell Compiler (GHC) to compile the code.
@@ -585,23 +601,68 @@ scope frame \textit{before} the current one are added as children (in the rose
 tree forest) of all of nodes corresponding to the names in the secret list of
 the stack frame in which the left-hand side name occured.
 
+An alternate way to view the scope stack is as a stack of \textit{relations} on
+on names. Each item of the stack is a relation such that two names are related
+if and only if the left-hand name is a public variable declared in the corresponding
+scope and the right-hand name is a secret variable in a conditional within the scope.
+
+This allows us to look for leaks that happen ``through'' a control construct.
+
+The operations on the scope stack data structure have the following type signatures:
+
+\begin{lstlisting}
+emptyScope :: Scope
+
+scopeAddName :: Scope -> Name -> Scope
+scopePush :: Scope -> [Name] -> Scope
+scopePop :: Scope -> Scope
+publicNonLocals :: Scope -> Name -> Maybe [Name]
+\end{lstlisting}
+
+These operations are used by the tool in its analysis of an EDSL
+program as follows:
+
+Whenever a declaration is encountered in EDSL code, the corresponding variable
+name is added to the scope stack with \ttt{scopeAddName}. Whenever a control
+structure is entered (such as a \ttt{for} loop or an \ttt{if} statement),
+\ttt{scopePush} is called with a list of all secret variables (if any) in the
+condition of that control structure. When an assignment is encountered, it
+uses \ttt{publicNonLocals} to see if there are any secret variables associated
+to an enclosing control structure, outside of which the given name has been declared.
+
 At the end of the algorithm, only leaves corresponding to public names are
-retained.
+retained. This is due to the fact that the only time a leak occurs, from the
+perspective of this static analysis tool, is if a secret variable eventually
+gets indirectly copied to a public variable.
 
 
 \section{Related Work}
-The way that the type-level tagging mechanism works is similar to several other
-prior works. One such work is McBride's "Kleisli Arrows of Outrageous Fortune"~\cite{KleisliArrows}. In that paper, an invalid state is unable to be reached as the result of
-a similar type-level tag as the \ttt{Sensitivity} tag in the present paper.
-However, significantly more machinery is involved in the McBride paper, as
-it is necessary to put such a tag on a monadic type. While a monadic type is
-used in the present paper (in the form of the \ttt{Cmd} type), this type
-does not use a type-level tag. The creation of such machinery is the
-main purpose of the McBride paper.
+\label{sec:RelatedWork}
 
+The way that the type-level tagging mechanism works is similar to several other
+prior works. One such work is McBride's \textit{Kleisli Arrows of Outrageous
+Fortune}~\cite{KleisliArrows}. In that paper, an invalid state is unable to be
+reached as the result of a similar type-level tag as the \ttt{Sensitivity} tag
+in the present paper: the McBride paper uses a type-level tag which indicates
+whether a file handle is open or closed. However, significantly more machinery
+is involved in the McBride paper, as it is necessary to put such a tag on a
+monadic type. While a monadic type is used in the present paper (in the form of
+the \ttt{Cmd} type), this type does not use a type-level tag. The creation of
+such machinery is the main purpose of the McBride paper.
+
+A significant recent work also related to the use of domain specific languages
+with strong, static type systems to control information flow for security
+purposes is \textit{Liquid Information Flow Control} by Polikarpova et
+al.~\cite{Lifty} In this work, a novel domain specific programming language is
+developed which has a static type system that is geared specifically towards
+expressing security policies at a type level. As this is done within a static
+type system, these invariants are machine-verified at compile-time.  Not only
+can these policy violations be detected, the system they develop is also able to
+fix leaks.
 
 
 \section{Future Work}
+\label{sec:FutureWork}
 A further investigation into the tradeoffs and possible additional features of
 the information flow analysis is likely to be useful. This could provide a more
 accurate and succinct picture to programmers of where leaks are occurring, or
@@ -614,6 +675,12 @@ compile-time by the type checker.~\cite{CertProg, DepHaskSpec} A more
 lightweight technique, which might be able to be applied to allow for more
 expressive policies to control of information flow within the type system, would
 be the ``ghosts of departed proofs'' design technique.~\cite{DepartedProofs}
+
+Another possible, related, future development would be the to attempt to add a
+mechanism which automatically fixes some (or all) leaks. Such a system has precendent
+in the previously mentioned paper \textit{Liquid Information Flow Control}.~\cite{Lifty}
+This could give programmers an additional tool towards ensuring correctness, with
+respect to SpectreGuard annotations.
 
 Additionally, features to safely convert between sensitivity levels could prove
 useful. A conversion from public to secret would be straightforward. A situational conversion
@@ -635,6 +702,7 @@ regular Haskell code within the EDSL. For example, a loop can be explicitly unro
 at the same time preserving the brevity of using a loop.
 
 \section{Conclusion}
+\label{sec:Conclusion}
 
 Building upon the SpectreGuard work~\cite{SpectreGuard}, we have constructed
 a system which allows the programmer greater assurance that the SpectreGuard
