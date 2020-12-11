@@ -173,9 +173,13 @@ in the EDSL is transformed into C code, a name generator first annotates the
 abstract syntax tree (AST) with globally unique names (enforcing the Barendregt
 variable convention; see Chapter 2 in~\cite{BarendregtConversion}). This
 annotated AST can be used by both the code generator and the information flow
-leak analysis tool (the latter is described in Section \ref{sec:Analysis}). It
-is worth noting that, as a result of this technique, the names in the generated
-C code will not generally be the same as the names in the EDSL code.
+leak analysis tool (the latter is described in Section \ref{sec:Analysis}). The
+code generator performs a transformation from code in the syntax given in the
+left column of Fig.~\ref{fig:Syntax} to the right column of the figure. This is
+transformation recursively applies itself when it reaches the parts marked with
+an overline in the right column of the figure. It is worth noting that, as a
+result of this technique, the names in the generated C code will not generally
+be the same as the names in the EDSL code.
 
 The one major aspect of the C code generator that is not described in this table
 is how the loop variable in \ttt{for} loops can be tagged as secret (if appropriate).
@@ -394,8 +398,6 @@ the EDSL, to explicitly specify the type of any expression when necessary or des
   \caption{Typing rules for sensitivity types}
 \label{fig:SensTypes}
 \end{figure}
-
-...
 
 \section{Examples}
 \label{sec:Examples}
@@ -704,7 +706,7 @@ respect to SpectreGuard annotations.
 Additionally, features to safely convert between sensitivity levels could prove
 useful. A conversion from public to secret would be straightforward. A situational conversion
 going the other direction could be provided by an instruction in the EDSL
-which might perform a Spectre mitigation measure, such as a cache flush.~\cite{PLtea-james}
+which might perform a Spectre mitigation measure, such as a cache flushes at appropriate times.~\cite{PLtea-james}
 
 More primitive operations and support for a foreign function interface (FFI)
 with C would make the EDSL more practical. This would be straightforward to add,
@@ -742,16 +744,24 @@ as the theory of information flow~\cite{InfoFlowAnalysis}, would be particularly
 
 Another possible avenue of future work is the creation of ``obfuscate''
 operations: operations which change the contents of secret variable in such a
-way that it is not feasible to recover the original contents. An example is a
-hash function. This could be a mechanism to go from a secret variable to a
-public variable. The type system and analysis tool could then be modified to
-account for this. Perhaps it is also possible to allow the programmer to create
-new obfuscate functions, maybe using a restricted subset of the language. Also,
-it might be possible to use information theory concepts, like the conditional
-entropy~\cite{InfoTheory} of the function output conditioned on its input, to create a framework
-to statically provide assurance that there is a certain limit on how much
+way that it is not feasible to recover the original contents (within the context
+of a certain threat model). An example is a hash function. This could be a
+mechanism to go from a secret variable to a public variable. The type system and
+analysis tool could then be modified to account for this. Perhaps it is also
+possible to allow the programmer to create new obfuscate functions, maybe using
+a restricted subset of the language. Also, it might be possible to use
+information theory concepts, like the conditional entropy~\cite{InfoTheory} of
+the function output conditioned on its input, to create a framework to
+statically provide assurance that there is a certain limit on how much
 information could be theoretically recovered (in general) after such a
-programmer-defined obfuscate function is applied.
+programmer-defined obfuscate function is applied. Perhaps a sub-language for
+obfuscate functions could be developed, which allows the expression of such
+``information losing'' functions, where a notion of ``information loss'' can
+be given by the programmers so that it fits the particular threat model
+that they are operating under. Then the implementation of the obfuscate
+functions could be statically checked to ensure that they do, in fact,
+follow this information loss specification. This might be able to be accomplished
+via an extension of the type system, similarly to how the type system is used in~\cite{Lifty}.
 
 \section{Conclusion}
 \label{sec:Conclusion}
