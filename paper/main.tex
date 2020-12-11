@@ -102,7 +102,7 @@ University of Kansas, USA\\
 \begin{abstract}
 
   A Spectre mitigation strategy in the form of a mechanism for marking variables
-  as ``non-speculative'' was developed in \cite{SpectreGuard}. In this paper, we
+  as ``non-speculative'' was developed in the form of \textit{SpectreGuard}\cite{SpectreGuard}. In this paper, we
   develop an embedded domain specific language (EDSL) in Haskell to provide
   support for this feature, with a backend that generates C code. The static
   type system of Haskell is used so that many basic forms of copying secret
@@ -117,7 +117,7 @@ University of Kansas, USA\\
 \section{Introduction}
 \label{sec:Introduction}
 SpectreGuard is provides an abstraction that allows programmers to prevent
-speculative access of certain variables.~\cite{SpectreGuard} As Spectre-based
+speculative access of certain variables~\cite{SpectreGuard}. As Spectre-based
 attacks remain an issue, even in modern computer systems, such mitigations and
 preventative measures are crucial to maintaining the security of software.  For
 preserving program correctness, static analyses are desirable to prevent
@@ -149,12 +149,12 @@ In this paper, we make the following contributions:
 \section{Background}
 
 Haskell is a purely functional programming language with strong static type
-system based on System F and algebraic datatypes (ADTs).~\cite{HistoryOfHaskell}
+system based on System F and algebraic datatypes (ADTs)~\cite{HistoryOfHaskell}.
 These features, particularly the type system, the algebraic datatypes and its
 support for higher-order functions, make it a powerful tool for the creation of
 EDSLs. Expressions, commands and programs (compound commands) can be
 straightforwardly expressed using ADTs using a \textit{deep
-embedding}.~\cite{DeepAndShallow}
+embedding}~\cite{DeepAndShallow}.
 
 A deep embedding directly exposes its abstract syntax tree (AST) as a value.
 This allows EDSL programs to be easily manipulated and examined, such as for
@@ -184,7 +184,7 @@ be the same as the names in the EDSL code.
 The one major aspect of the C code generator that is not described in this table
 is how the loop variable in \ttt{for} loops can be tagged as secret (if appropriate).
 This is accomplished by recovering the type-level sensitivity type information at
-runtime. Such a recovery is made possible by the use of singletons.~\cite{Singletons}
+runtime. Such a recovery is made possible by the use of singletons~\cite{Singletons}.
 \ttt{for} loops provide a particular example of where Haskell's support for higher-order function
 can be used inside an EDSL to implement commands that involve the creation of
 new variables.
@@ -317,7 +317,7 @@ part of the command type (as opposed to the expression type).
 
 Singletons~\cite{Singletons} are used to preserve this type level at runtime, so that the
 code generator can generate SpectreGuard annotations where appropriate. These annotations can
-then be used by the SpectreGuard mitigation system.~\cite{SpectreGuard}
+then be used by the SpectreGuard mitigation system~\cite{SpectreGuard}.
 
 In Fig. \ref{fig:SensTypes}, it is assumed that $\tau$ and $\sigma$ are given by the
 following grammar:
@@ -692,21 +692,21 @@ could be incorporated into the type system, by exploiting the dependent type
 features enabled by singletons~\cite{Singletons} and, in the future, by
 Dependent Haskell.~\cite{DepHaskSpec} Dependent types provide a powerful
 technique for writing programs at a type-level, which will be executed at
-compile-time by the type checker.~\cite{CertProg, DepHaskSpec} A more
+compile-time by the type checker~\cite{CertProg, DepHaskSpec}. A more
 lightweight technique, which might be able to be applied to allow for more
 expressive policies to control of information flow within the type system, would
-be the ``ghosts of departed proofs'' design technique.~\cite{DepartedProofs}
+be the ``ghosts of departed proofs'' design technique~\cite{DepartedProofs}.
 
 Another possible, related, future development would be the to attempt to add a
 mechanism which automatically fixes some (or all) leaks. Such a system has precendent
-in the previously mentioned paper \textit{Liquid Information Flow Control}.~\cite{Lifty}
+in the previously mentioned paper \textit{Liquid Information Flow Control}~\cite{Lifty}.
 This could give programmers an additional tool towards ensuring correctness, with
 respect to SpectreGuard annotations.
 
 Additionally, features to safely convert between sensitivity levels could prove
 useful. A conversion from public to secret would be straightforward. A situational conversion
 going the other direction could be provided by an instruction in the EDSL
-which might perform a Spectre mitigation measure, such as a cache flushes at appropriate times.~\cite{PLtea-james}
+which might perform a Spectre mitigation measure, such as a cache flushes at appropriate times~\cite{PLtea-james}.
 
 More primitive operations and support for a foreign function interface (FFI)
 with C would make the EDSL more practical. This would be straightforward to add,
@@ -720,7 +720,7 @@ the EDSL and an FFI going the other direction.
 Additional primitive operations added to the EDSL could include higher-level language features, such as higher-order
 functions, algebraic data types, pattern matching and tail recursion. An implementation path for
 these features is described in the upcoming paper \textit{On Adding Pattern Matching to Haskell-based Deeply Embedded Domain Specific Languages}, by
-David Young, Mark Grebe and Andy Gill.~\cite{PatMatchingEDSL}
+David Young, Mark Grebe and Andy Gill~\cite{PatMatchingEDSL}.
 
 The sensitivity checking and the analysis tool could be added as an extension to
 a C compiler, via a plugin mechanism such as Clang's plugin system. This would
