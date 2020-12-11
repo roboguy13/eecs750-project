@@ -740,6 +740,18 @@ A related topic would be enriching the theoretical background of the leak analys
 programming language semantics, particularly denotational semantics and operational semantics~\cite{WinskelBook}, as well
 as the theory of information flow~\cite{InfoFlowAnalysis}, would be particularly applicable here.
 
+Another possible avenue of future work is the creation of ``obfuscate''
+operations: operations which change the contents of secret variable in such a
+way that it is not feasible to recover the original contents. An example is a
+hash function. This could be a mechanism to go from a secret variable to a
+public variable. The type system and analysis tool could then be modified to
+account for this. Perhaps it is also possible to allow the programmer to create
+new obfuscate functions, maybe using a restricted subset of the language. Also,
+it might be possible to use information theory concepts, like the conditional
+entropy~\cite{InfoTheory} of the function output conditioned on its input, to create a framework
+to statically provide assurance that there is a certain limit on how much
+information could be theoretically recovered (in general) after such a
+programmer-defined obfuscate function is applied.
 
 \section{Conclusion}
 \label{sec:Conclusion}
